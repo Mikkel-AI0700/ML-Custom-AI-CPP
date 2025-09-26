@@ -3,10 +3,11 @@
 #include <string>
 #include <format>
 #include <armadillo>
+#include "../../base/base.hpp"
 
 using namespace arma;
 
-class LinearRegression {
+class LinearRegression: public BaseEstimator {
     public:
         rowvec weights;
         float bias;
@@ -46,7 +47,7 @@ double LinearRegression::compute_weights_gradients (mat train_x, rowvec train_y,
     return weights_gradient;
 }
 
-dobule LinearRegression::compute_bias_gradients (rowvec train_y, rowvec predictions) {
+double LinearRegression::compute_bias_gradients (rowvec train_y, rowvec predictions) {
     double bias_gradient = 1 / train_y.n_rows() * sum((predictions - train_y));
     return bias_gradient;
 }
@@ -65,7 +66,7 @@ void LinearRegression::fit (mat train_x, rowvec train_y) {
     for (int index = 0; index < this->epochs; index++) {
         std::cout << std::format("Epoch: {} | Weights: {} | Bias: {}", epoch, this->weights, this->bias);
 
-        rowvec predictions = dot(train_x, this->weights) * this->bias;
+        rowvec predictions = dot(train_x, this->weights) + this->bias;
         double weight_gradient = LinearRegression::compute_weights_gradients(train_x, train_y, predictions);
         double bias_gradient = LinearRegression::compute_bias_gradients(train_y, predictions);
         LinearRegression::update_weights(weight_gradient);
@@ -74,7 +75,7 @@ void LinearRegression::fit (mat train_x, rowvec train_y) {
 }
 
 void LinearRegression::predict (mat test_x) {
-    return dot(test_x, this->weights) * this->bias;
+    return dot(test_x, this->weights) + this->bias;
 }
 
 int main () {
