@@ -52,11 +52,11 @@ dobule LinearRegression::compute_bias_gradients (rowvec train_y, rowvec predicti
 }
 
 void LinearRegression::update_weights (double weights_gradient) {
-    this->weights = this->weights - this->learning_rate - weights_gradient;
+    this->weights = this->weights - this->learning_rate * weights_gradient;
 }
 
 void LinearRegression::update_bias (double bias_gradient) {
-    this->bias = this->bias - this->learning_rate - bias_gradient;
+    this->bias = this->bias - this->learning_rate * bias_gradient;
 }
 
 void LinearRegression::fit (mat train_x, rowvec train_y) {
