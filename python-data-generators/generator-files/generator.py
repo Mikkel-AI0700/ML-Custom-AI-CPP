@@ -4,6 +4,7 @@ import os
 import json
 import argparse
 from pathlib import Path
+from typing import Any
 import pandas as pd
 from sklearn.datasets import (
     make_regression,
@@ -16,6 +17,17 @@ def _read_generator_configuration (json_configuration_path: Path):
 
 def _write_to_file (filename: str, generated_dataset: pd.DataFrame):
     generated_dataset.to_csv(filename)
+
+def _change_configuration (config_key_value: dict[str, Any], generator_configuration: dict[str, Any]):
+    config_key, config_value = config_key_value.items()
+    try:
+        if config_key in generator_configuration.keys():
+            generator_configuration.update({config_key: config_value})
+        else:
+            raise ValueError("[-] Error: Non existent parameter name detected")
+    except ValueError as non_existent_config_key:
+        print(non_existent_config_key)
+        exit(1)
 
 def create_regression (dataset_filename: str, regressor_config: Path):
     regression_config_dict = _return_generator_configuration(regressor_config)
