@@ -2,41 +2,56 @@
 
 # Python's data generator variables
 python_generator_path="$(pwd)/python-data-generator/generator-files/generator.py"
-python_generator_configuration=""
-python_test_files_path="$(pwd)/python-data-generator/test-data"
+
+# Python's generator configuration paths
+regressor_generator_config_path="$(pwd)/python-data-generators/json-config-files/regressor"
+classification_generator_config_path="$(pwd)/python-data-generators/json-config-files/classification"
+clustering_generator_config_path="$(pwd)/python-data-generators/json-config-files/clustering"
 
 # Machine learning algorithms file paths
 linreg_source_path="$(pwd)/linear-regression/source-codes/lin-reg-main.cpp"
 
-# Activate Python's random generator
+function generate_datasets () {
+    local key_value_change=""
+    local dataset_type=""
+    local test_data_name=""
+    local skip_data_generation=0
 
-function generate_and_store () {
-    local learning_type=""
+    if [[ ! ${skip_data_generation} -eq 1 ]]; then
+        ./"${python_generator_path}" \
+            --dataset-type "${data_generation_type}" \
+            --key-value-change "${key_value_change}" \
+            --dataset-filename "${test_data_name}"
+        return
+    else
+        return
+    fi 
+}
+
+function activate_machine_learning_models () {
+    local algorithm_type="$1"
+
+    if [[ "${algorithm_type}" == "linreg" ]]; then
+        g++ "${linreg-source-path}" -o "compiled-${algorithm_type}"
+    fi
 }
 
 function main () {
-    local model_argument=""
+    local key_value_change=""
     local data_generation_type=""
     local test_data_name=""
+    local skip_data_generation=0
 
-    while getopts "m:d:f:" option_flag; do
+    while getopts "sk:d:f:m" option_flag; do
         case "${option_flag}" in
-            m) model_argument="${OPTARG}" ;;
+            m) key_value_change="${OPTARG}" ;;
             d) data_generation_type="${OPTARG}" ;;
             f) test_data_name="${OPTARG}" ;;
+            s) skip_data_generation=
         esac
     done
 
-    # Check if user wants to generate test data
-    if [[ "${data_generation_type}" == "regression" ]]; then
-        :
-    elif [[ "${data_generation_type}" == "classification" ]]; then
-        :
-    elif [[ "${data_generation_type}" == "clustering" ]]; then
-        :
-    else
-        :
-    fi
+    generate_datasets "${key_value_change}" "${data_generaton_type}" "${test_data_name}" "${skip_data_generation}"
 
     # Activate the machine learning models
     if [[]]; then
