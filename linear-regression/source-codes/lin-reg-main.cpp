@@ -4,10 +4,11 @@
 #include <format>
 #include <armadillo>
 #include "../../base/base.hpp"
+#include "../../base/classifier_mixin.hpp"
 
 using namespace arma;
 
-class LinearRegression: public BaseEstimator {
+class LinearRegression: public BaseEstimator, public ClassifierMixin{
     public:
         rowvec weights;
         float bias;
@@ -15,8 +16,9 @@ class LinearRegression: public BaseEstimator {
         float learning_rate;
         bool fit_intercept;
 
+        LinearRegression(int epochs, float learning_rate, bool fit_intercept);
         void fit (mat train_x, rowvec train_y);
-        rowvec predict (mat test_x);
+        double predict (mat test_x);
 
     private:
         void initialize_weights_bias (mat train_x);
@@ -43,20 +45,20 @@ void LinearRegression::initialize_weights_bias (mat train_x) {
 }
 
 double LinearRegression::compute_weights_gradients (mat train_x, rowvec train_y, rowvec predictions) {
-    double weights_gradient = 1 / train_x.n_rows() * dot(train_x.t(), (predictions - train_y));
+    double weights_gradient = 1 / train_x.n_rows * dot(train_x.t(), (predictions - train_y));
     return weights_gradient;
 }
 
 double LinearRegression::compute_bias_gradients (rowvec train_y, rowvec predictions) {
-    double bias_gradient = 1 / train_y.n_rows() * sum((predictions - train_y));
+    double bias_gradient = 1 / train_y.n_rows * sum((predictions - train_y));
     return bias_gradient;
 }
 
-void LinearRegression::update_weights (double weights_gradient) {
+void LinearRegression::update_weights (rowvec weights_gradient) {
     this->weights = this->weights - this->learning_rate * weights_gradient;
 }
 
-void LinearRegression::update_bias (double bias_gradient) {
+void LinearRegression::update_bias (float bias_gradient) {
     this->bias = this->bias - this->learning_rate * bias_gradient;
 }
 
@@ -64,7 +66,7 @@ void LinearRegression::fit (mat train_x, rowvec train_y) {
     LinearRegression::initialize_weights_bias(train_x);
 
     for (int index = 0; index < this->epochs; index++) {
-        std::cout << std::format("Epoch: {} | Weights: {} | Bias: {}", epoch, this->weights, this->bias);
+        std::cout << std::format("Epoch: {} | Weights: {} | Bias: {}", index, this->weights, this->bias);
 
         rowvec predictions = dot(train_x, this->weights) + this->bias;
         double weight_gradient = LinearRegression::compute_weights_gradients(train_x, train_y, predictions);
@@ -74,7 +76,7 @@ void LinearRegression::fit (mat train_x, rowvec train_y) {
     }
 }
 
-void LinearRegression::predict (mat test_x) {
+double LinearRegression::predict (mat test_x) {
     return dot(test_x, this->weights) + this->bias;
 }
 
