@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import os
 import json
 import argparse
@@ -56,7 +54,7 @@ def main ():
     clustering_json_path = Path("python-data-generators/json-config-files/clustering/")
 
     argp = argparse.ArgumentParser(description="ML dataset generators")
-    argp.add_argument("--dataset_type", required=True, dest="dset_type")
+    argp.add_argument("--dataset-type", required=True, dest="dset_type")
     argp.add_argument("--use-default", required=False, action="store_true")
     argp.add_argument("--key-value-change", required=False, dest="key_value_parameter")
     argp.add_argument("--dataset-filename", required=False, dset="dataset_filename")
@@ -75,4 +73,6 @@ def main ():
     except ValueError as incorrect_argument_error:
         print(incorrect_argument_error)
         exit(1)
+
+main()
 
