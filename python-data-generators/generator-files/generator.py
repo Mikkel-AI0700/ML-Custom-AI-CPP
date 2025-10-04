@@ -17,10 +17,11 @@ def _write_to_file (filename: str, generated_dataset: pd.DataFrame):
     generated_dataset.to_csv(filename)
 
 def _change_configuration (config_key_value: dict[str, Any], generator_configuration: dict[str, Any]):
-    config_key, config_value = config_key_value.items()
     try:
-        if len(key_config_value) == 0:
+        if len(config_key_value) == 0:
             return
+        else:
+            config_key, config_value = config_key_value.items()
 
         if config_key in generator_configuration.keys():
             generator_configuration.update({config_key: config_value})
@@ -31,21 +32,21 @@ def _change_configuration (config_key_value: dict[str, Any], generator_configura
         exit(1)
 
 def create_regression (dataset_filename: str, regressor_config: Path, key_value_config: dict[str, Any]):
-    regression_config_dict = _return_generator_configuration(regressor_config)
-    _change_configuration(key_value_config, regression_config_dict)
-    regressor_dataset = make_regression(**regression_config_dict)
+    regressor_configuration = _read_generator_configuration(regressor_config)
+    _change_configuration(key_value_config, regressor_configuration)
+    regressor_dataset = make_regression(**regressor_config)
     _write_to_file(dataset_filename, pd.DataFrame(regressor_dataset))
 
 def create_classification (dataset_filename: str, classification_config: Path, key_value_config: dict[str, Any]):
-    classification_config_dict = _return_generator_configuration(classification_config)
-    _change_configuration(key_value_config, classification_config_dict)
-    classification_dataset = make_classification(**classification_config_dict)
+    classification_configuration = _read_generator_configuration(classification_config)
+    _change_configuration(key_value_config, classification_configuration)
+    classification_dataset = make_classification(**classification_configuration)
     _write_to_file(dataset_filename, pd.DataFrame(classification_dataset))
 
 def create_clustering (dataset_filename: str, clustering_config: Path, key_value_config: dict[str, Any]):
-    clustering_config_dict = _return_generator_configuration(clustering_config)
-    _change_configuration(key_value_config, clustering_config_dict)
-    clustering_dataset = make_blobs(**clustering_config_dict)
+    clustering_configuration = _read_generator_configuration(clustering_config)
+    _change_configuration(key_value_config, clustering_configuration)
+    clustering_dataset = make_blobs(**clustering_configuration)
     _write_to_file(dataset_filename, pd.DataFrame(clustering_dataset))
 
 def main ():
@@ -63,11 +64,11 @@ def main ():
 
     try:
         if parsed_arguments.dset_type == "regression":
-            create_regression(parsed_args.dataset_filename, regressor_json_path)
+            create_regression(parsed_arguments.dataset_filename, regressor_json_path)
         elif parsed_arguments.dset_type == "classification":
-            create_classification(parsed_args.dataset_filename, classification_json_path)
+            create_classification(parsed_arguments.dataset_filename, classification_json_path)
         elif parsed_arguments.dset_type == "clustering":
-            create_clustering(parsed_args.dset_type, clustering_json_path)
+            create_clustering(parsed_arguments.dset_type, clustering_json_path)
         else:
             raise ValueError(f"[-] Error: Incorrect dataset type -> {parsed_argument.dset_type}")
     except ValueError as incorrect_argument_error:
