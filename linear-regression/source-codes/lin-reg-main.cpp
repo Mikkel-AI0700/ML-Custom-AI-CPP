@@ -1,30 +1,30 @@
 #include <iostream>
-#include <map>
+#include <filesystem>
 #include <string>
 #include <format>
 #include <armadillo>
-#include "../../base/base.hpp"
-#include "../../base/classifier_mixin.hpp"
+#include "../../include/class-inheritors/base.hpp"
+#include "../../include/class-inheritors/classifier_mixin.hpp"
 
 using namespace arma;
 
-class LinearRegression: public BaseEstimator, public ClassifierMixin{
+class LinearRegression: public BaseEstimator, public ClassifierMixin {
     public:
-        rowvec weights;
+        arma::rowvec weights;
         float bias;
         int epochs;
         float learning_rate;
         bool fit_intercept;
 
         LinearRegression(int epochs, float learning_rate, bool fit_intercept);
-        void fit (mat train_x, rowvec train_y);
-        double predict (mat test_x);
+        void fit (arma::mat train_x, arma::rowvec train_y);
+        arma::rowvec predict (arma::mat test_x);
 
     private:
-        void initialize_weights_bias (mat train_x);
-        double compute_weights_gradients (mat train_x, rowvec train_y, rowvec predictions);
-        double compute_bias_gradients (rowvec train_y, rowvec predictions);
-        void update_weights (rowvec computed_weight_gradients);
+        void initialize_weights_bias (arma::mat train_x);
+        arma::rowvec compute_weights_gradients (arma::mat train_x, arma::rowvec train_y, arma::rowvec predictions);
+        double compute_bias_gradients (arma::rowvec train_y, arma::rowvec predictions);
+        void update_weights (arma::rowvec computed_weight_gradients);
         void update_bias (float copmputed_bias_gradient);
 };
 
@@ -44,17 +44,17 @@ void LinearRegression::initialize_weights_bias (mat train_x) {
     }
 }
 
-double LinearRegression::compute_weights_gradients (mat train_x, rowvec train_y, rowvec predictions) {
-    double weights_gradient = 1 / train_x.n_rows * dot(train_x.t(), (predictions - train_y));
+arma::rowvec LinearRegression::compute_weights_gradients (arma::mat train_x, arma::rowvec train_y, arma::rowvec predictions) {
+    arma::rowvec weights_gradient = 1.0 / train_x.n_rows * (train_x * (predictions - train_y));
     return weights_gradient;
 }
 
-double LinearRegression::compute_bias_gradients (rowvec train_y, rowvec predictions) {
+double LinearRegression::compute_bias_gradients (arma::rowvec train_y, arma::rowvec predictions) {
     double bias_gradient = 1 / train_y.n_rows * sum((predictions - train_y));
     return bias_gradient;
 }
 
-void LinearRegression::update_weights (rowvec weights_gradient) {
+void LinearRegression::update_weights (arma::rowvec weights_gradient) {
     this->weights = this->weights - this->learning_rate * weights_gradient;
 }
 
@@ -62,25 +62,56 @@ void LinearRegression::update_bias (float bias_gradient) {
     this->bias = this->bias - this->learning_rate * bias_gradient;
 }
 
-void LinearRegression::fit (mat train_x, rowvec train_y) {
+void LinearRegression::fit (arma::mat train_x, arma::rowvec train_y) {
     LinearRegression::initialize_weights_bias(train_x);
 
     for (int index = 0; index < this->epochs; index++) {
-        std::cout << std::format("Epoch: {} | Weights: {} | Bias: {}", index, this->weights, this->bias);
+        std::cout << "[+] Epoch: " << (index + 1);
+        std::cout << "[+] Weights: " << this->weights;
+        std::cout << "[+] Bias: " << this->bias;
 
-        rowvec predictions = dot(train_x, this->weights) + this->bias;
-        double weight_gradient = LinearRegression::compute_weights_gradients(train_x, train_y, predictions);
+        // Main predictions logic
+        arma::rowvec predictions = (train_x * this->weights.t()) + this->bias;
+
+        // Weights and bias computing and updating
+        arma::rowvec weight_gradient = LinearRegression::compute_weights_gradients(train_x, train_y, predictions);
         double bias_gradient = LinearRegression::compute_bias_gradients(train_y, predictions);
         LinearRegression::update_weights(weight_gradient);
         LinearRegression::update_bias(bias_gradient);
     }
 }
 
-double LinearRegression::predict (mat test_x) {
+arma::rowvec LinearRegression::predict (arma::mat test_x) {
     return dot(test_x, this->weights) + this->bias;
 }
 
-int main () {
+int main (int argc, char *argv[]) {
+    LinearRegression linreg_instance(2000, 0.0001, true);
+    arma::mat train_x;
+    arma::colvec train_y;
+    arma::mat test_x;
+    arma::colvec test_y;
 
+    std::vector<std::variant<arma::mat, arma::colvec>> datasets = {
+        train_x,
+        train_y,
+        test_x,
+        test_y
+    };
+
+    std::vector<std::filesystem::path> data_path = {
+        "python-data-generators/test-data/train_x.csv",
+        "python-data-generators/test-data/train_y.csv",
+        "python-data-generators/test-data/test_x.csv",
+        "python-data-generators/test-data/test_y.csv"
+    };
+
+    try {
+        if (argc < 3) {
+            throw "[-] Insufficient amount of arguments";
+        }
+    } catch (std::string incorrect_insufficient_argument) {
+
+    }
 }
 
