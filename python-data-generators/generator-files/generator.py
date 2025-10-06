@@ -1,9 +1,11 @@
 import os
+import re
 import json
 import argparse
 from pathlib import Path
 from typing import Any
 import pandas as pd
+from sklearn.model_selection import train_test_split
 from sklearn.datasets import (
     make_regression,
     make_classification,
@@ -13,8 +15,23 @@ from sklearn.datasets import (
 def _read_generator_configuration (json_configuration_path: Path):
     return json.load(json_configuration_path)
 
-def _write_to_file (filename: str, generated_dataset: pd.DataFrame):
-    generated_dataset.to_csv(filename)
+def _write_to_file (filepath: Path, generated_dataset: pd.DataFrame):
+    for file in os.listdir(filepath):
+        if re.findall("(train|test)_(x|y)_dataset.csv", file):
+            os.remove(file)
+
+    train_x, test_x, train_y, test_y = train_test_split(
+        generated_dataset.iloc[:, :-1],
+        generated_dataset.iloc[:, -1],
+        train_size=0.8,
+        test_size=0.2,
+        shuffle=True,
+        random_state=42
+    )
+
+    for dataset in [train_x, test_x, train_y, test_y]:
+        dataset = pd.DataFrame(dataset)
+        dataset.to_csv(filepath)
 
 def _change_configuration (config_key_value: dict[str, Any], generator_configuration: dict[str, Any]):
     try:
@@ -70,7 +87,7 @@ def main ():
         elif parsed_arguments.dset_type == "clustering":
             create_clustering(parsed_arguments.dset_type, clustering_json_path)
         else:
-            raise ValueError(f"[-] Error: Incorrect dataset type -> {parsed_argument.dset_type}")
+            raise ValueError(f"[-] Error: Incorrect dataset type -> {parsed_arguments.dset_type}")
     except ValueError as incorrect_argument_error:
         print(incorrect_argument_error)
         exit(1)
