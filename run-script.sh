@@ -32,7 +32,8 @@ function activate_machine_learning_models () {
     local algorithm_type="$1"
 
     if [[ "${algorithm_type}" == "linreg" ]]; then
-        g++ "${linreg-source-path}" -o "compiled-${algorithm_type}"
+        g++ "${linreg-source-path}" -o "linear-regression/source-codes/compiled-${algorithm_type}"
+        ./"linear-regression/source-codes/compiled-${algorithm_type}"
     fi
 }
 
@@ -47,11 +48,12 @@ function main () {
             m) key_value_change="${OPTARG}" ;;
             d) data_generation_type="${OPTARG}" ;;
             f) test_data_name="${OPTARG}" ;;
-            s) skip_data_generation=
+            s) skip_data_generation=1 ;;
         esac
     done
 
     generate_datasets "${key_value_change}" "${data_generaton_type}" "${test_data_name}" "${skip_data_generation}"
+    activate_machine_learning_models "${data_generation_type}
 
     # Activate the machine learning models
     if [[]]; then
