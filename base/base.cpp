@@ -5,14 +5,15 @@
 #include <filesystem>
 #include <armadillo>
 #include "../include/class-inheritors/base.hpp"
+#include "../include/complex-datatypes/complex.hpp"
 
-std::map<std::string, std::variant<int, float, std::string>> BaseEstimator::get_parameters () {
-
+HashMapParameters BaseEstimator::get_parameters (HashMapParameters hyperparameter_hashmap) {
+    return hyperparameter_hashmap;
 }
 
 void BaseEstimator::set_parameters (
-    std::map<std::string, std::variant<int, float, std::string>> user_hyperparameters,
-    std::map<std::string, std::variant<int, float, std::string>> original_hyperparameters
+    HashMapParameters user_hyperparameters,
+    HashMapParameters original_hyperparameters
 ) {
 
 }
