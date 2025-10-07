@@ -53,11 +53,6 @@ function main () {
     done
 
     generate_datasets "${key_value_change}" "${data_generaton_type}" "${test_data_name}" "${skip_data_generation}"
-    activate_machine_learning_models "${data_generation_type}
-
-    # Activate the machine learning models
-    if [[]]; then
-        :
-    fi
+    activate_machine_learning_models "${data_generation_type}"
 }
 
