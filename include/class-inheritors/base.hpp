@@ -8,23 +8,22 @@
 #include <string>
 #include <filesystem>
 #include <armadillo>
-
-using namespace arma;
+#include "../complex-datatypes/complex.hpp"
 
 class BaseEstimator {
     public:
         BaseEstimator::~BaseEstimator() = default;
 
-        virtual std::map<std::string, std::variant<int, float, std::string>> get_parameters ();
+        virtual HashMapParameters get_parameters (HashMapParameters hyperparameter_hashmap);
         virtual void set_parameters (
-            std::map<std::string, std::variant<int, float, std::string>> original_hyperparameters,
-            std::map<std::string, std::variant<int, float, std::string>> user_hyperparameters
+            HashMapParameters original_hyperparameters,
+            HashMapParameters user_hyperparameters
         );
 
-        virtual void fit (mat train_x, rowvec train_y);
-        virtual arma::rowvec predict (mat test_x);
-        virtual arma::rowvec predict_proba (mat test_x);
-        virtual arma::rowvec predict_proba_log (mat test_x);
+        virtual void fit (arma::mat train_x, arma::rowvec train_y);
+        virtual arma::rowvec predict (arma::mat test_x);
+        virtual arma::rowvec predict_proba (arma::mat test_x);
+        virtual arma::rowvec predict_proba_log (arma::mat test_x);
 
         virtual void save_model (
             std::string model_save_name,
