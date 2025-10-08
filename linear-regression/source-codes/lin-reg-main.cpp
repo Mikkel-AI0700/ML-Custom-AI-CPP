@@ -124,6 +124,8 @@ int main (int argc, char *argv[]) {
                 std::get<arma::colvec>(datasets[index]).load(data_path[index]);
             }
         }
+
+        linreg_instance.fit(std::get<arma::mat>(datasets.at(0)), std::get<arma::colvec>(datasets.at(1)));
     } catch (std::string incorrect_insufficient_argument) {
         std::cout << incorrect_insufficient_argument << std::endl;
     }
