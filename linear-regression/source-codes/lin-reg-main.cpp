@@ -82,7 +82,7 @@ void LinearRegression::fit (arma::mat train_x, arma::rowvec train_y) {
 }
 
 arma::rowvec LinearRegression::predict (arma::mat test_x) {
-    return dot(test_x, this->weights) + this->bias;
+    return (test_x * this->weights) + this->bias;
 }
 
 int main (int argc, char *argv[]) {
@@ -91,6 +91,12 @@ int main (int argc, char *argv[]) {
     arma::colvec train_y;
     arma::mat test_x;
     arma::colvec test_y;
+
+    std::map<std::string, std::variant<int, float, bool>> model_hyperparams = {
+        {"epochs", linreg_instance.epochs},
+        {"learning_rate", linreg_instance.learning_rate},
+        {"fit_intercept", linreg_instance.fit_intercept}
+    };
 
     std::vector<std::variant<arma::mat, arma::colvec>> datasets = {
         train_x,
@@ -110,8 +116,16 @@ int main (int argc, char *argv[]) {
         if (argc < 3) {
             throw "[-] Insufficient amount of arguments";
         }
-    } catch (std::string incorrect_insufficient_argument) {
 
+        for (int index = 0; index < datasets.size(); index++) {
+            if (std::holds_alternative<arma::mat>(datasets[index])) {
+                std::get<arma::mat>(datasets[index]).load(data_path[index]);
+            } else {
+                std::get<arma::colvec>(datasets[index]).load(data_path[index]);
+            }
+        }
+    } catch (std::string incorrect_insufficient_argument) {
+        std::cout << incorrect_insufficient_argument << std::endl;
     }
 }
 
