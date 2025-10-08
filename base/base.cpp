@@ -1,9 +1,9 @@
-#include <any>
-#include <variant>
 #include <map>
 #include <string>
-#include <filesystem>
+#include <tuple>
+#include <algorithm>
 #include <armadillo>
+#include <filesystem>
 #include "../include/class-inheritors/base.hpp"
 #include "../include/complex-datatypes/complex.hpp"
 
@@ -12,10 +12,20 @@ HashMapParameters BaseEstimator::get_parameters (HashMapParameters hyperparamete
 }
 
 void BaseEstimator::set_parameters (
-    HashMapParameters user_hyperparameters,
-    HashMapParameters original_hyperparameters
+    HashMapParameters user_hyperparams,
+    HashMapParameters orig_hyperparams
 ) {
-
+    try {
+        for (const auto& [key, value] : user_hyperparams) {
+            if (orig_hyperparams.find(key) == orig_hyperparams.end()) {
+                throw "Key to change did not appear in the original hyperparameters";
+            } else {
+                orig_hyperparams[key] = value;
+            }
+        }
+    } catch (std::string non_existent_key) {
+        std::cout << "[-] Error: " << non_existent_key << std::endl;
+    }
 }
 
 void BaseEstimator::save_model (
