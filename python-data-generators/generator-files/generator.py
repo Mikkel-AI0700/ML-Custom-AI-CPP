@@ -48,19 +48,19 @@ def _change_configuration (config_key_value: dict[str, Any], generator_configura
         print(non_existent_config_key)
         exit(1)
 
-def create_regression (dataset_filename: str, regressor_config: Path, key_value_config: dict[str, Any]):
+def create_regression (dataset_filename: Path, regressor_config: Path, key_value_config: dict[str, Any]):
     regressor_configuration = _read_generator_configuration(regressor_config)
     _change_configuration(key_value_config, regressor_configuration)
     regressor_dataset = make_regression(**regressor_config)
     _write_to_file(dataset_filename, pd.DataFrame(regressor_dataset))
 
-def create_classification (dataset_filename: str, classification_config: Path, key_value_config: dict[str, Any]):
+def create_classification (dataset_filename: Path, classification_config: Path, key_value_config: dict[str, Any]):
     classification_configuration = _read_generator_configuration(classification_config)
     _change_configuration(key_value_config, classification_configuration)
     classification_dataset = make_classification(**classification_configuration)
     _write_to_file(dataset_filename, pd.DataFrame(classification_dataset))
 
-def create_clustering (dataset_filename: str, clustering_config: Path, key_value_config: dict[str, Any]):
+def create_clustering (dataset_filename: Path, clustering_config: Path, key_value_config: dict[str, Any]):
     clustering_configuration = _read_generator_configuration(clustering_config)
     _change_configuration(key_value_config, clustering_configuration)
     clustering_dataset = make_blobs(**clustering_configuration)
@@ -75,17 +75,29 @@ def main ():
     argp.add_argument("--dataset-type", required=True, dest="dset_type")
     argp.add_argument("--use-default", required=False, action="store_true")
     argp.add_argument("--key-value-change", required=False, dest="key_value_parameter")
-    argp.add_argument("--dataset-filename", required=False, dset="dataset_filename")
+    argp.add_argument("--dataset-filename", required=False, dest="dataset_filename")
 
     parsed_arguments = argp.parse_args()
 
     try:
         if parsed_arguments.dset_type == "regression":
-            create_regression(parsed_arguments.dataset_filename, regressor_json_path)
+            create_regression(
+                parsed_arguments.dataset_filename, 
+                regressor_json_path, 
+                parsed_arguments.key_value_parameter
+            )
         elif parsed_arguments.dset_type == "classification":
-            create_classification(parsed_arguments.dataset_filename, classification_json_path)
+            create_classification(
+                parsed_arguments.dataset_filename, 
+                classification_json_path,
+                parsed_arguments.key_value_change
+            )
         elif parsed_arguments.dset_type == "clustering":
-            create_clustering(parsed_arguments.dset_type, clustering_json_path)
+            create_clustering(
+                parsed_arguments.dset_type, 
+                clustering_json_path,
+                parsed_arguments.key_value_change
+            )
         else:
             raise ValueError(f"[-] Error: Incorrect dataset type -> {parsed_arguments.dset_type}")
     except ValueError as incorrect_argument_error:
