@@ -13,16 +13,17 @@ from sklearn.datasets import (
 )
 
 def _read_generator_configuration (json_configuration_path: Path):
-    return json.load(json_configuration_path)
+    with json_configuration_path.open("r") as config_path:
+        return json.load(config_path)
 
-def _write_to_file (filepath: Path, generated_dataset: pd.DataFrame):
+def _write_to_file (filename: str, filepath: Path, X: pd.DataFrame, Y: pd.DataFrame):
     for file in os.listdir(filepath):
-        if re.findall("(train|test)_(x|y)_dataset.csv", file):
+        if re.findall(r"(train|test)_(x|y)_dataset.csv", file):
             os.remove(file)
 
     train_x, test_x, train_y, test_y = train_test_split(
-        generated_dataset.iloc[:, :-1],
-        generated_dataset.iloc[:, -1],
+        X,
+        Y,
         train_size=0.8,
         test_size=0.2,
         shuffle=True,
@@ -31,7 +32,7 @@ def _write_to_file (filepath: Path, generated_dataset: pd.DataFrame):
 
     for dataset in [train_x, test_x, train_y, test_y]:
         dataset = pd.DataFrame(dataset)
-        dataset.to_csv(filepath)
+        dataset.to_csv(f"{filepath}/{filename}")
 
 def _change_configuration (config_key_value: dict[str, Any], generator_configuration: dict[str, Any]):
     try:
@@ -48,28 +49,33 @@ def _change_configuration (config_key_value: dict[str, Any], generator_configura
         print(non_existent_config_key)
         exit(1)
 
-def create_regression (dataset_filename: Path, regressor_config: Path, key_value_config: dict[str, Any]):
+def create_regression (dataset_filename: Path, dataset_gen_path: Path, regressor_config: Path, key_value_config: dict[str, Any]):
     regressor_configuration = _read_generator_configuration(regressor_config)
     _change_configuration(key_value_config, regressor_configuration)
-    regressor_dataset = make_regression(**regressor_config)
-    _write_to_file(dataset_filename, pd.DataFrame(regressor_dataset))
+    X, Y = make_regression(**regressor_config)
+    _write_to_file(dataset_filename, dataset_gen_path, pd.DataFrame(X), pd.DataFrame(Y))
 
-def create_classification (dataset_filename: Path, classification_config: Path, key_value_config: dict[str, Any]):
+def create_classification (dataset_filename: Path, dataset_gen_path: Path, classification_config: Path, key_value_config: dict[str, Any]):
     classification_configuration = _read_generator_configuration(classification_config)
     _change_configuration(key_value_config, classification_configuration)
-    classification_dataset = make_classification(**classification_configuration)
-    _write_to_file(dataset_filename, pd.DataFrame(classification_dataset))
+    X, Y = make_classification(**classification_configuration)
+    _write_to_file(dataset_filename, dataset_gen_path, pd.DataFrame(X), pd.DataFrame(Y))
 
-def create_clustering (dataset_filename: Path, clustering_config: Path, key_value_config: dict[str, Any]):
+def create_clustering (dataset_filename: Path, dataset_gen_path: Path, clustering_config: Path, key_value_config: dict[str, Any]):
     clustering_configuration = _read_generator_configuration(clustering_config)
     _change_configuration(key_value_config, clustering_configuration)
-    clustering_dataset = make_blobs(**clustering_configuration)
-    _write_to_file(dataset_filename, pd.DataFrame(clustering_dataset))
+    X, Y = make_blobs(**clustering_configuration)
+    _write_to_file(dataset_filename, dataset_gen_path, pd.DataFrame(X), pd.DataFrame(Y))
+
 
 def main ():
     regressor_json_path = Path("python-data-generators/json-config-files/regressor/")
     classification_json_path = Path("python-data-generators/json-config-files/classification/")
     clustering_json_path = Path("python-data-generators/json-config-files/clustering/")
+
+    regressor_datasets_path = Path("python-data-generators/test-data/regression-data")
+    classification_datasets_path = Path("python-data-generators/test-data/classification-data")
+    clustering_datasets_path = Path("python-data-generators/test-data/clustering-data")
 
     argp = argparse.ArgumentParser(description="ML dataset generators")
     argp.add_argument("--dataset-type", required=True, dest="dset_type")
@@ -82,19 +88,22 @@ def main ():
     try:
         if parsed_arguments.dset_type == "regression":
             create_regression(
-                parsed_arguments.dataset_filename, 
+                parsed_arguments.dataset_filename,
+                regressor_datasets_path, 
                 regressor_json_path, 
                 parsed_arguments.key_value_parameter
             )
         elif parsed_arguments.dset_type == "classification":
             create_classification(
-                parsed_arguments.dataset_filename, 
+                parsed_arguments.dataset_filename,
+                classification_datasets_path,
                 classification_json_path,
                 parsed_arguments.key_value_change
             )
         elif parsed_arguments.dset_type == "clustering":
             create_clustering(
                 parsed_arguments.dset_type, 
+                clustering_datasets_path,
                 clustering_json_path,
                 parsed_arguments.key_value_change
             )
