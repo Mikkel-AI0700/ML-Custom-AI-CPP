@@ -23,8 +23,8 @@ function generate_datasets () {
             --dataset-type "${dataset_type}" \
             --dataset-filename "${filename}" \
             --key-value-change "${key_value_change}"
-        return
     else
+        echo "[*] Training and testing dataset generation skipped. Proceeding to compilation"
         return
     fi
 }
@@ -33,7 +33,7 @@ function activate_machine_learning_models () {
     local algorithm_type="$1"
 
     if [[ "${algorithm_type}" == "linreg" ]]; then
-        g++ "${linreg-source-path}" -o "linear-regression/source-codes/compiled-${algorithm_type}"
+        g++ "${linreg_source_path}" -o "linear-regression/source-codes/compiled-${algorithm_type}"
         ./"linear-regression/source-codes/compiled-${algorithm_type}"
     fi
 }
@@ -44,17 +44,19 @@ function main () {
     local key_value_change=""
     local skip_dataset_generation=0
 
-    while getopts "sk:d:f:m" option_flag; do
+    while getopts "m:d:f:s" option_flag; do
         case "${option_flag}" in
             d) dataset_type="${OPTARG}" ;;
             f) filename="${OPTARG}" ;;
             k) key_value_change="${OPTARG}" ;;
-            s) skip_dataset_generation="${OPTARG}" ;;
+            s) skip_dataset_generation=1 ;;
         esac
     done
 
-    generate_datasets "${dataset_type}" "${filename}" "${key_value_change}" "${skip_dataset_generation}"
-    activate_machine_learning_models "${data_generation_type}"
+    if [[ -n "${dataset_type}" && -n "${filename}" ]]; then
+        generate_datasets "${dataset_type}" "${filename}" "${key_value_change}" $skip_dataset_generation
+        activate_machine_learning_models "${data_generation_type}"
+    fi
 }
 
-main
+main "$@"
