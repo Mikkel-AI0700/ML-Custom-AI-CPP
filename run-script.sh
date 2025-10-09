@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Python's data generator variables
-python_generator_path="$(pwd)/python-data-generator/generator-files/generator.py"
+python_generator_path="$(pwd)/python-data-generators/generator-files/generator.py"
 
 # Python's generator configuration paths
 regressor_generator_config_path="$(pwd)/python-data-generators/json-config-files/regressor"
@@ -12,20 +12,21 @@ clustering_generator_config_path="$(pwd)/python-data-generators/json-config-file
 linreg_source_path="$(pwd)/linear-regression/source-codes/lin-reg-main.cpp"
 
 function generate_datasets () {
-    local key_value_change=""
-    local dataset_type=""
-    local test_data_name=""
-    local skip_data_generation=0
+    local dataset_type="$1"
+    local filename="$2"
+    local key_value_change="$3"
+    local skip_data_generation=$4
 
     if [[ ! ${skip_data_generation} -eq 1 ]]; then
-        ./"${python_generator_path}" \
-            --dataset-type "${data_generation_type}" \
-            --key-value-change "${key_value_change}" \
-            --dataset-filename "${test_data_name}"
+        echo "[+] Running the generator: ${python_generator_path}"
+        python3 "${python_generator_path}" \
+            --dataset-type "${dataset_type}" \
+            --dataset-filename "${filename}" \
+            --key-value-change "${key_value_change}"
         return
     else
         return
-    fi 
+    fi
 }
 
 function activate_machine_learning_models () {
@@ -38,21 +39,22 @@ function activate_machine_learning_models () {
 }
 
 function main () {
+    local dataset_type=""
+    local filename=""
     local key_value_change=""
-    local data_generation_type=""
-    local test_data_name=""
-    local skip_data_generation=0
+    local skip_dataset_generation=0
 
     while getopts "sk:d:f:m" option_flag; do
         case "${option_flag}" in
-            m) key_value_change="${OPTARG}" ;;
-            d) data_generation_type="${OPTARG}" ;;
-            f) test_data_name="${OPTARG}" ;;
-            s) skip_data_generation=1 ;;
+            d) dataset_type="${OPTARG}" ;;
+            f) filename="${OPTARG}" ;;
+            k) key_value_change="${OPTARG}" ;;
+            s) skip_dataset_generation="${OPTARG}" ;;
         esac
     done
 
-    generate_datasets "${key_value_change}" "${data_generaton_type}" "${test_data_name}" "${skip_data_generation}"
+    generate_datasets "${dataset_type}" "${filename}" "${key_value_change}" "${skip_dataset_generation}"
     activate_machine_learning_models "${data_generation_type}"
 }
 
+main
