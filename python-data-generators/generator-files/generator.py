@@ -49,19 +49,34 @@ def _change_configuration (config_key_value: dict[str, Any], generator_configura
         print(non_existent_config_key)
         exit(1)
 
-def create_regression (dataset_filename: Path, dataset_gen_path: Path, regressor_config: Path, key_value_config: dict[str, Any]):
+def create_regression (
+    dataset_filename: Path, 
+    dataset_gen_path: Path, 
+    regressor_config: Path, 
+    key_value_config: dict[str, Any]
+):
     regressor_configuration = _read_generator_configuration(regressor_config)
     _change_configuration(key_value_config, regressor_configuration)
     X, Y = make_regression(**regressor_config)
     _write_to_file(dataset_filename, dataset_gen_path, pd.DataFrame(X), pd.DataFrame(Y))
 
-def create_classification (dataset_filename: Path, dataset_gen_path: Path, classification_config: Path, key_value_config: dict[str, Any]):
+def create_classification (
+    dataset_filename: Path, 
+    dataset_gen_path: Path, 
+    classification_config: Path, 
+    key_value_config: dict[str, Any]
+):
     classification_configuration = _read_generator_configuration(classification_config)
     _change_configuration(key_value_config, classification_configuration)
     X, Y = make_classification(**classification_configuration)
     _write_to_file(dataset_filename, dataset_gen_path, pd.DataFrame(X), pd.DataFrame(Y))
 
-def create_clustering (dataset_filename: Path, dataset_gen_path: Path, clustering_config: Path, key_value_config: dict[str, Any]):
+def create_clustering (
+    dataset_filename: Path, 
+    dataset_gen_path: Path, 
+    clustering_config: Path, 
+    key_value_config: dict[str, Any]
+):
     clustering_configuration = _read_generator_configuration(clustering_config)
     _change_configuration(key_value_config, clustering_configuration)
     X, Y = make_blobs(**clustering_configuration)
@@ -73,9 +88,15 @@ def main ():
     classification_json_path = Path("python-data-generators/json-config-files/classification/")
     clustering_json_path = Path("python-data-generators/json-config-files/clustering/")
 
-    regressor_datasets_path = Path("python-data-generators/test-data/regression-data")
-    classification_datasets_path = Path("python-data-generators/test-data/classification-data")
-    clustering_datasets_path = Path("python-data-generators/test-data/clustering-data")
+    regressor_datasets_path = Path(
+        "python-data-generators/test-data/regression-data/regressor-generator-configuration.json"
+    )
+    classification_datasets_path = Path(
+        "python-data-generators/test-data/classification-data/classification-configuration.json"
+    )
+    clustering_datasets_path = Path(
+        "python-data-generators/test-data/clustering-data/clustering-generator.json"
+    )
 
     argp = argparse.ArgumentParser(description="ML dataset generators")
     argp.add_argument("--dataset-type", required=True, dest="dset_type")
