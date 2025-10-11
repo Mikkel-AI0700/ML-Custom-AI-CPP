@@ -19,6 +19,7 @@ def _read_generator_configuration (json_configuration_path: Path):
 def _write_to_file (filename: str, filepath: Path, X: pd.DataFrame, Y: pd.DataFrame):
     for file in os.listdir(filepath):
         if re.findall(r"(train|test)_(x|y)_dataset.csv", file):
+            print(f"[+] Removed -> {file}")
             os.remove(file)
 
     train_x, test_x, train_y, test_y = train_test_split(
@@ -84,19 +85,15 @@ def create_clustering (
 
 
 def main ():
-    regressor_json_path = Path("python-data-generators/json-config-files/regressor/")
-    classification_json_path = Path("python-data-generators/json-config-files/classification/")
-    clustering_json_path = Path("python-data-generators/json-config-files/clustering/")
+    BASE_PATH = Path(__file__).resolve().parent.parent
 
-    regressor_datasets_path = Path(
-        "python-data-generators/test-data/regression-data/regressor-generator-configuration.json"
-    )
-    classification_datasets_path = Path(
-        "python-data-generators/test-data/classification-data/classification-configuration.json"
-    )
-    clustering_datasets_path = Path(
-        "python-data-generators/test-data/clustering-data/clustering-generator.json"
-    )
+    regressor_dataset_path = BASE_PATH / "test-data/regression-data"
+    classification_dataset_path = BASE_PATH / "test-data/classification-data"
+    clustering_dataset_path = BASE_PATH / "test-data/clustering-data"
+
+    regressor_json_path = BASE_PATH / "json-config-files/regressor/regressor-generator-configuration.json"
+    classification_json_path = BASE_PATH / "json-config-files/classification/classification-generator-configuration.json"
+    clustering_json_path = BASE_PATH / "json-config-files/clustering/clustering-generator-configuration.json"
 
     argp = argparse.ArgumentParser(description="ML dataset generators")
     argp.add_argument("--dataset-type", required=True, dest="dset_type")
@@ -110,21 +107,21 @@ def main ():
         if parsed_arguments.dset_type == "regression":
             create_regression(
                 parsed_arguments.dataset_filename,
-                regressor_datasets_path, 
+                regressor_dataset_path,
                 regressor_json_path, 
                 parsed_arguments.key_value_parameter
             )
         elif parsed_arguments.dset_type == "classification":
             create_classification(
                 parsed_arguments.dataset_filename,
-                classification_datasets_path,
+                classification_dataset_path,
                 classification_json_path,
                 parsed_arguments.key_value_change
             )
         elif parsed_arguments.dset_type == "clustering":
             create_clustering(
                 parsed_arguments.dset_type, 
-                clustering_datasets_path,
+                clustering_dataset_path,
                 clustering_json_path,
                 parsed_arguments.key_value_change
             )
