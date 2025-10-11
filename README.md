@@ -4,6 +4,8 @@
 This project aims to **recreate the core concepts of Scikit-Learn using C++**, with support from **Python** for dataset generation and **Bash** for automation.  
 The goal is to understand how Scikit-Learn works under the hood while deepening C++ knowledge and exploring how modern machine learning concepts can be implemented in a low-level language.
 
+The other similar project **ML-Custom-AI** is the pure Python version of this project and it serves as the reference point for **ML-Custom-AI-CPP**
+
 ## 🧠 Motivation
 While Scikit-Learn is a high-level and well-optimized library built in Python (with C/C++ extensions), this project was created to:
 - Learn **how Scikit-Learn’s internals**—such as algorithms, preprocessors, and model management—work.
