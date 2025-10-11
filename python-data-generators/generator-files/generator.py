@@ -14,7 +14,8 @@ from sklearn.datasets import (
 
 def _read_generator_configuration (json_configuration_path: Path):
     with json_configuration_path.open("r") as config_path:
-        return json.load(config_path)
+        dataset_configuration_dict = json.load(config_path)
+    return dataset_configuration_dict
 
 def _write_to_file (filename: str, filepath: Path, X: pd.DataFrame, Y: pd.DataFrame):
     for file in os.listdir(filepath):
@@ -43,6 +44,7 @@ def _change_configuration (config_key_value: dict[str, Any], generator_configura
             config_key, config_value = config_key_value.items()
 
         if config_key in generator_configuration.keys():
+            print(f"[+] Updating: {config_key} | New value: {config_value}")
             generator_configuration.update({config_key: config_value})
         else:
             raise ValueError("[-] Error: Non existent parameter name detected")
@@ -58,7 +60,7 @@ def create_regression (
 ):
     regressor_configuration = _read_generator_configuration(regressor_config)
     _change_configuration(key_value_config, regressor_configuration)
-    X, Y = make_regression(**regressor_config)
+    X, Y = make_regression(**regressor_configuration)
     _write_to_file(dataset_filename, dataset_gen_path, pd.DataFrame(X), pd.DataFrame(Y))
 
 def create_classification (
