@@ -2,11 +2,7 @@
 
 # Python's data generator variables
 python_generator_path="$(pwd)/python-data-generators/generator-files/generator.py"
-
-# Python's generator configuration paths
-regressor_generator_config_path="$(pwd)/python-data-generators/json-config-files/regressor"
-classification_generator_config_path="$(pwd)/python-data-generators/json-config-files/classification"
-clustering_generator_config_path="$(pwd)/python-data-generators/json-config-files/clustering"
+python_tld="$(pwd)/python-data-generators"
 
 # Machine learning algorithms file paths
 linreg_source_path="$(pwd)/linear-regression/source-codes/lin-reg-main.cpp"
@@ -16,6 +12,13 @@ function generate_datasets () {
     local filename="$2"
     local key_value_change="$3"
     local skip_data_generation=$4
+
+    if [[ ! -z "${PYTHONPATH}" && ! -z "${VIRTUAL_ENV}" ]]; then
+        echo -n "[+] Python TLD set: $(echo ${PYTHONPATH})\n [+] Venv set: $(echo ${VIRTUAL_ENV})"
+    else
+        export PYTHONPATH=${python_tld} && echo "TLD set: ${PYTHONPATH}"
+        source python-data-generators/generator-venv/bin/activate && echo "VENV set: ${VIRTUAL_ENV}"
+    fi
 
     if [[ ! ${skip_data_generation} -eq 1 ]]; then
         echo "[+] Running the generator: ${python_generator_path}"
