@@ -17,11 +17,10 @@ def _read_generator_configuration (json_configuration_path: Path):
         dataset_configuration_dict = json.load(config_path)
     return dataset_configuration_dict
 
-def _write_to_file (filename: str, filepath: Path, X: pd.DataFrame, Y: pd.DataFrame):
-    for file in os.listdir(filepath):
-        if re.findall(r"(train|test)_(x|y)_dataset.csv", file):
-            print(f"[+] Removed -> {file}")
-            os.remove(file)
+def _write_to_file (filepath: Path, X: pd.DataFrame, Y: pd.DataFrame):
+    for directory_content in os.listdir(filepath):
+        if re.findall(r"(train|test)_(x|y)_dataset.csv", directory_content):
+            print(f"[*] Removed: {directory_content}")
 
     train_x, test_x, train_y, test_y = train_test_split(
         X,
@@ -32,9 +31,12 @@ def _write_to_file (filename: str, filepath: Path, X: pd.DataFrame, Y: pd.DataFr
         random_state=42
     )
 
-    for dataset in [train_x, test_x, train_y, test_y]:
+    generated_datasets = [train_x, train_y, test_x, test_y]
+    filenames = ["train_x.csv", "train_y.csv", "test_x.csv", "test_y.csv"]
+
+    for (dataset, data_filename) in zip(generated_datasets, filenames):
         dataset = pd.DataFrame(dataset)
-        dataset.to_csv(f"{filepath}/{filename}")
+        dataset.to_csv(os.path.join(filepath, data_filename))
 
 def _change_configuration (config_key_value: dict[str, Any], generator_configuration: dict[str, Any]):
     try:
@@ -53,7 +55,6 @@ def _change_configuration (config_key_value: dict[str, Any], generator_configura
         exit(1)
 
 def create_regression (
-    dataset_filename: Path, 
     dataset_gen_path: Path, 
     regressor_config: Path, 
     key_value_config: dict[str, Any]
@@ -61,10 +62,9 @@ def create_regression (
     regressor_configuration = _read_generator_configuration(regressor_config)
     _change_configuration(key_value_config, regressor_configuration)
     X, Y = make_regression(**regressor_configuration)
-    _write_to_file(dataset_filename, dataset_gen_path, pd.DataFrame(X), pd.DataFrame(Y))
+    _write_to_file(dataset_gen_path, pd.DataFrame(X), pd.DataFrame(Y))
 
 def create_classification (
-    dataset_filename: Path, 
     dataset_gen_path: Path, 
     classification_config: Path, 
     key_value_config: dict[str, Any]
@@ -72,10 +72,9 @@ def create_classification (
     classification_configuration = _read_generator_configuration(classification_config)
     _change_configuration(key_value_config, classification_configuration)
     X, Y = make_classification(**classification_configuration)
-    _write_to_file(dataset_filename, dataset_gen_path, pd.DataFrame(X), pd.DataFrame(Y))
+    _write_to_file(dataset_gen_path, pd.DataFrame(X), pd.DataFrame(Y))
 
 def create_clustering (
-    dataset_filename: Path, 
     dataset_gen_path: Path, 
     clustering_config: Path, 
     key_value_config: dict[str, Any]
@@ -83,7 +82,7 @@ def create_clustering (
     clustering_configuration = _read_generator_configuration(clustering_config)
     _change_configuration(key_value_config, clustering_configuration)
     X, Y = make_blobs(**clustering_configuration)
-    _write_to_file(dataset_filename, dataset_gen_path, pd.DataFrame(X), pd.DataFrame(Y))
+    _write_to_file(dataset_gen_path, pd.DataFrame(X), pd.DataFrame(Y))
 
 
 def main ():
