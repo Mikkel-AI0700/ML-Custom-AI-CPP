@@ -24,7 +24,6 @@ function generate_datasets () {
         echo "[+] Running the generator: ${python_generator_path}"
         python3 "${python_generator_path}" \
             --dataset-type "${dataset_type}" \
-            --dataset-filename "${filename}" \
             --key-value-change "${key_value_change}"
     else
         echo "[*] Training and testing dataset generation skipped. Proceeding to compilation"
@@ -50,15 +49,18 @@ function main () {
     while getopts "m:d:f:s" option_flag; do
         case "${option_flag}" in
             d) dataset_type="${OPTARG}" ;;
-            f) filename="${OPTARG}" ;;
             k) key_value_change="${OPTARG}" ;;
             s) skip_dataset_generation=1 ;;
         esac
     done
 
-    if [[ -n "${dataset_type}" && -n "${filename}" ]]; then
+    if [[ -n "${dataset_type}" ]]; then
+        echo "[+] Passing on script arguments to generator.py"
         generate_datasets "${dataset_type}" "${filename}" "${key_value_change}" $skip_dataset_generation
         activate_machine_learning_models "${data_generation_type}"
+    else
+        echo "[-] Dataset type is not set. Aborting!"
+        exit 1
     fi
 }
 
