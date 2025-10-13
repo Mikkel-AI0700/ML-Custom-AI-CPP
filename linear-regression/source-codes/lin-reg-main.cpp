@@ -92,7 +92,7 @@ int main (int argc, char *argv[]) {
     arma::mat test_x;
     arma::colvec test_y;
 
-    std::map<std::string, std::variant<int, float, bool>> model_hyperparams = {
+    HashMapParameters model_hyperparams = {
         {"epochs", linreg_instance.epochs},
         {"learning_rate", linreg_instance.learning_rate},
         {"fit_intercept", linreg_instance.fit_intercept}
