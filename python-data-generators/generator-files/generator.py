@@ -100,14 +100,13 @@ def main ():
     argp.add_argument("--dataset-type", required=True, dest="dset_type")
     argp.add_argument("--use-default", required=False, action="store_true")
     argp.add_argument("--key-value-change", required=False, dest="key_value_parameter")
-    argp.add_argument("--dataset-filename", required=False, dest="dataset_filename")
 
     parsed_arguments = argp.parse_args()
 
     try:
         if parsed_arguments.dset_type == "regression":
+            print("[+] Creating training and testing regression datasets")
             create_regression(
-                parsed_arguments.dataset_filename,
                 regressor_dataset_path,
                 regressor_json_path, 
                 parsed_arguments.key_value_parameter
