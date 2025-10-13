@@ -5,6 +5,6 @@
 #include <variant>
 #include <map>
 
-using HashMapParameters = std::map<std::string, std::variant<int, float, std::string>>;
+using HashMapParameters = std::map<std::string, std::variant<int, float, std::string, bool>>;
 
 #endif
