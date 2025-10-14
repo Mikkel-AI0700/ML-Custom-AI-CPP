@@ -63,6 +63,11 @@ function main () {
         esac
     done
 
+    if [[ -n "${dataset_type}" && ${skip_dataset_generation} -eq 1 ]]; then
+        echo "[-] Error: Dataset type is set but skip_dataset_generation flag is also set to true"
+        exit 1
+    fi
+
     if [[ -n "${dataset_type}" && -n "${algorithm_type}" ]]; then
         echo "[+] Passing on script arguments to generator.py"
         generate_datasets "${dataset_type}" "${filename}" "${key_value_change}" $skip_dataset_generation
