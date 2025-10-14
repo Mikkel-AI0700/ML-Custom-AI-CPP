@@ -16,8 +16,8 @@ function generate_datasets () {
     if [[ ! -z "${PYTHONPATH}" && ! -z "${VIRTUAL_ENV}" ]]; then
         echo -n "[+] Python TLD set: $(echo ${PYTHONPATH})\n [+] Venv set: $(echo ${VIRTUAL_ENV})"
     else
-        export PYTHONPATH=${python_tld} && echo "TLD set: ${PYTHONPATH}"
-        source python-data-generators/generator-venv/bin/activate && echo "VENV set: ${VIRTUAL_ENV}"
+        export PYTHONPATH=${python_tld} && echo "[*] TLD set: ${PYTHONPATH}"
+        source python-data-generators/generator-venv/bin/activate && echo "[*] VENV set: ${VIRTUAL_ENV}"
     fi
 
     if [[ ! ${skip_data_generation} -eq 1 ]]; then
@@ -35,12 +35,20 @@ function activate_machine_learning_models () {
     local algorithm_type="$1"
 
     if [[ "${algorithm_type}" == "linreg" ]]; then
-        g++ "${linreg_source_path}" -o "linear-regression/source-codes/compiled-${algorithm_type}"
+        g++ "${linreg_source_path}" -o "$(pwd)/linear-regression/source-codes/compiled-${algorithm_type}" \
+            -Iinclude \
+            -fdiagnostics-color=always \
+            -fdiagnostics-show-line-numbers \
+            -fdiagnostics-show-caret \
+            -Wall \
+            -Wextra \
+            -O3
         ./"linear-regression/source-codes/compiled-${algorithm_type}"
     fi
 }
 
 function main () {
+    local algorithm_type=""
     local dataset_type=""
     local filename=""
     local key_value_change=""
@@ -48,18 +56,19 @@ function main () {
 
     while getopts "m:d:f:s" option_flag; do
         case "${option_flag}" in
+            m) algorithm_type="${OPTARG}" ;;
             d) dataset_type="${OPTARG}" ;;
             k) key_value_change="${OPTARG}" ;;
             s) skip_dataset_generation=1 ;;
         esac
     done
 
-    if [[ -n "${dataset_type}" ]]; then
+    if [[ -n "${dataset_type}" && -n "${algorithm_type}" ]]; then
         echo "[+] Passing on script arguments to generator.py"
         generate_datasets "${dataset_type}" "${filename}" "${key_value_change}" $skip_dataset_generation
-        activate_machine_learning_models "${data_generation_type}"
+        activate_machine_learning_models "${algorithm_type}"
     else
-        echo "[-] Dataset type is not set. Aborting!"
+        echo "[-] Dataset type or algorithm type is not set. Aborting!"
         exit 1
     fi
 }
