@@ -12,7 +12,7 @@
 
 class BaseEstimator {
     public:
-        BaseEstimator::~BaseEstimator() = default;
+        ~BaseEstimator() = default;
 
         virtual HashMapParameters get_parameters (HashMapParameters hyperparameter_hashmap);
         virtual void set_parameters (
