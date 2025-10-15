@@ -13,6 +13,11 @@ function generate_datasets () {
     local key_value_change="$3"
     local skip_data_generation=$4
 
+    if [[ -n "${dataset_type}" && ${skip_data_generation} -eq 1 ]]; then
+        echo "[-] Error: Dataset type is set but skip dataset generation flag is also set"
+        exit 1
+    fi
+
     if [[ ! -z "${PYTHONPATH}" && ! -z "${VIRTUAL_ENV}" ]]; then
         echo -n "[+] Python TLD set: $(echo ${PYTHONPATH})\n [+] Venv set: $(echo ${VIRTUAL_ENV})"
     else
@@ -37,6 +42,9 @@ function activate_machine_learning_models () {
     if [[ "${algorithm_type}" == "linreg" ]]; then
         g++ "${linreg_source_path}" -o "$(pwd)/linear-regression/source-codes/compiled-${algorithm_type}" \
             -Iinclude \
+            -larmadillo \
+            -lblas \
+            -llapack \
             -fdiagnostics-color=always \
             -fdiagnostics-show-line-numbers \
             -fdiagnostics-show-caret \
@@ -62,11 +70,6 @@ function main () {
             s) skip_dataset_generation=1 ;;
         esac
     done
-
-    if [[ -n "${dataset_type}" && ${skip_dataset_generation} -eq 1 ]]; then
-        echo "[-] Error: Dataset type is set but skip_dataset_generation flag is also set to true"
-        exit 1
-    fi
 
     if [[ -n "${dataset_type}" && -n "${algorithm_type}" ]]; then
         echo "[+] Passing on script arguments to generator.py"
