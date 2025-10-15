@@ -7,6 +7,9 @@ python_tld="$(pwd)/python-data-generators"
 # Machine learning algorithms file paths
 linreg_source_path="$(pwd)/linear-regression/source-codes/lin-reg-main.cpp"
 
+# Directory to place the compiled ML algorithms
+compiled_algorithms_path="$(pwd)/compiled-algorithms"
+
 function generate_datasets () {
     local dataset_type="$1"
     local filename="$2"
@@ -38,21 +41,26 @@ function generate_datasets () {
 
 function activate_machine_learning_models () {
     local algorithm_type="$1"
+    declare -A ml_algorithms=(
+        ["linreg"]="${linreg_source_path}"
+    )
 
-    if [[ "${algorithm_type}" == "linreg" ]]; then
-        g++ "${linreg_source_path}" -o "$(pwd)/linear-regression/source-codes/compiled-${algorithm_type}" \
-            -Iinclude \
-            -larmadillo \
-            -lblas \
-            -llapack \
-            -fdiagnostics-color=always \
-            -fdiagnostics-show-line-numbers \
-            -fdiagnostics-show-caret \
-            -Wall \
-            -Wextra \
-            -O3
-        ./"linear-regression/source-codes/compiled-${algorithm_type}"
-    fi
+    for ml_key in "!${ml_algorithms[@]}"; do
+        ml_value="${ml_algorithms[${ml_key}]}"
+        if [[ "${ml_key}" == "${algorithm_type}" ]]; then
+            g++ "${ml_value}" -o "$(pwd)/compiled-algorithms/" \
+                -Iinclude \
+                -larmadillo \
+                -lblas \
+                -llapack \
+                -fdiagnostics-color=always \
+                -fdiagnostics-show-line-numbers \
+                -fdiagnostics-show-caret \
+                -Wall \
+                -Wextra \
+                -O3
+        fi
+    done
 }
 
 function main () {
