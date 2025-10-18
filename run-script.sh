@@ -14,18 +14,18 @@ function generate_datasets () {
     local dataset_type="$1"
     local filename="$2"
     local key_value_change="$3"
-    local skip_data_generation=$4
-
-    if [[ -n "${dataset_type}" && ${skip_data_generation} -eq 1 ]]; then
-        echo "[-] Error: Dataset type is set but skip dataset generation flag is also set"
-        exit 1
-    fi
+    local skip_data_generation=$4 
 
     if [[ ! -z "${PYTHONPATH}" && ! -z "${VIRTUAL_ENV}" ]]; then
         echo -n "[+] Python TLD set: $(echo ${PYTHONPATH})\n [+] Venv set: $(echo ${VIRTUAL_ENV})"
     else
         export PYTHONPATH=${python_tld} && echo "[*] TLD set: ${PYTHONPATH}"
         source python-data-generators/generator-venv/bin/activate && echo "[*] VENV set: ${VIRTUAL_ENV}"
+    fi
+
+    if [[ -n "${dataset_type}" && ${skip_data_generation} -eq 1 ]]; then
+        echo "[-] Error: Dataset type is set but skip dataset generation flag is also set"
+        exit 1
     fi
 
     if [[ ! ${skip_data_generation} -eq 1 ]]; then
@@ -45,10 +45,16 @@ function activate_machine_learning_models () {
         ["linreg"]="${linreg_source_path}"
     )
 
-    for ml_key in "!${ml_algorithms[@]}"; do
+    for ml_key in "${!ml_algorithms[@]}"; do
         ml_value="${ml_algorithms[${ml_key}]}"
+
+        if [[ -e "${compiled_algorithms_path}/compiled-${algorithm_type}" ]]; then
+            echo "[-] A compiled version of ${algorithm_type} exists! Removing..."
+            rm -fr "${compiled_algorithms_path}/compiled-${algorithm_type}"
+        fi
+
         if [[ "${ml_key}" == "${algorithm_type}" ]]; then
-            g++ "${ml_value}" -o "$(pwd)/compiled-algorithms/" \
+            g++ "${ml_value}" "$(pwd)/base/base.cpp" -o "${compiled_algorithms_path}/compiled-${algorithm_type}" \
                 -Iinclude \
                 -larmadillo \
                 -lblas \
@@ -59,6 +65,7 @@ function activate_machine_learning_models () {
                 -Wall \
                 -Wextra \
                 -O3
+            echo "[+] Successfully generated compiled-${algorithm_type}"
         fi
     done
 }
@@ -79,12 +86,12 @@ function main () {
         esac
     done
 
-    if [[ -n "${dataset_type}" && -n "${algorithm_type}" ]]; then
+    if [[  -n "${algorithm_type}" ]]; then
         echo "[+] Passing on script arguments to generator.py"
         generate_datasets "${dataset_type}" "${filename}" "${key_value_change}" $skip_dataset_generation
         activate_machine_learning_models "${algorithm_type}"
     else
-        echo "[-] Dataset type or algorithm type is not set. Aborting!"
+        echo "[-] Error: Machine learning algorithm type is not set! Aborting."
         exit 1
     fi
 }
