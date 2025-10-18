@@ -28,13 +28,29 @@ void BaseEstimator::set_parameters (
     }
 }
 
+void BaseEstimator::fit (arma::mat train_x, arma::rowvec train_y) {
+    ;
+}
+
+arma::rowvec BaseEstimator::predict (arma::mat test_x) {
+    ;
+}
+
+arma::rowvec BaseEstimator::predict_proba (arma::mat test_x) {
+    ;
+}
+
+arma::rowvec BaseEstimator::predict_proba_log (arma::mat test_x) {
+    ;
+}
+
 void BaseEstimator::save_model (
     const std::string model_save_file,
     const std::filesystem::path save_path
 ) {
-
+    ;
 }
 
 void BaseEstimator::load_model (std::filesystem::path load_path) {
-
+    ;
 }
