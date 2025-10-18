@@ -115,16 +115,13 @@ int main (int argc, char* argv[]) {
     };
     
     try { 
-        int epoch_script_argument = std::stoi(std::string(argv[1]));
-        float learning_rate_script_argument = std::stof(std::string(argv[2]));
-
         if (argc < 2) {
             throw std::length_error("[-] Error: Argument provided is less than two!. Aborting");
         }
 
         LinearRegression linreg_instance(
-            epoch_script_argument,
-            learning_rate_script_argument,
+            std::stoi(std::string(argv[1])),
+            std::stof(std::string(argv[2])),
             true
         );
 
