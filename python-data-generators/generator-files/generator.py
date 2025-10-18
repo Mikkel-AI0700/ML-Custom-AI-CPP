@@ -112,6 +112,7 @@ def main ():
                 parsed_arguments.key_value_parameter
             )
         elif parsed_arguments.dset_type == "classification":
+            print("[+] Creating training and testing classification datasets")
             create_classification(
                 parsed_arguments.dataset_filename,
                 classification_dataset_path,
@@ -119,6 +120,7 @@ def main ():
                 parsed_arguments.key_value_change
             )
         elif parsed_arguments.dset_type == "clustering":
+            print("[+] Creating training and testing clustering datasets")
             create_clustering(
                 parsed_arguments.dset_type, 
                 clustering_dataset_path,
@@ -132,4 +134,3 @@ def main ():
         exit(1)
 
 main()
-
