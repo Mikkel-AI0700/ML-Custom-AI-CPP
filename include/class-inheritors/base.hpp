@@ -12,13 +12,13 @@
 
 class BaseEstimator {
     public:
-        ~BaseEstimator() = default;
+        virtual ~BaseEstimator() = default;
 
         virtual HashMapParameters get_parameters (HashMapParameters hyperparameter_hashmap);
         virtual void set_parameters (HashMapParameters original_hyperparameters, HashMapParameters user_hyperparameters);
 
-        virtual void fit (arma::mat train_x, arma::rowvec train_y);
-        virtual arma::rowvec predict (arma::mat test_x);
+        virtual void fit (arma::mat& train_x, arma::colvec& train_y);
+        virtual arma::rowvec predict (arma::mat& test_x);
         virtual arma::rowvec predict_proba (arma::mat test_x);
         virtual arma::rowvec predict_proba_log (arma::mat test_x);
 
