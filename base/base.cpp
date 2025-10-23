@@ -12,27 +12,27 @@ HashMapParameters BaseEstimator::get_parameters (HashMapParameters hyperparamete
 }
 
 void BaseEstimator::set_parameters (
-    HashMapParameters user_hyperparams,
-    HashMapParameters orig_hyperparams
+    HashMapParameters user_hyperparameters,
+    HashMapParameters original_hyperparameters
 ) {
     try {
-        for (const auto& [key, value] : user_hyperparams) {
-            if (orig_hyperparams.find(key) == orig_hyperparams.end()) {
-                throw "Key to change did not appear in the original hyperparameters";
+        for (const auto& [key, value] : user_hyperparameters) {
+            if (original_hyperparameters.find(key) == original_hyperparameters.end()) {
+                throw std::invalid_argument("Key to change did not appear in the original hyperparameters");
             } else {
-                orig_hyperparams[key] = value;
+                original_hyperparameters[key] = value;
             }
         }
-    } catch (std::string non_existent_key) {
-        std::cout << "[-] Error: " << non_existent_key << std::endl;
+    } catch (const std::invalid_argument& non_existent_hyperparameter) {
+        std::cout << "[-] Error: " << non_existent_hyperparameter.what() << std::endl;
     }
 }
 
-void BaseEstimator::fit (arma::mat train_x, arma::rowvec train_y) {
+void BaseEstimator::fit (arma::mat& train_x, arma::colvec& train_y) {
     ;
 }
 
-arma::rowvec BaseEstimator::predict (arma::mat test_x) {
+arma::rowvec BaseEstimator::predict (arma::mat& test_x) {
     ;
 }
 
