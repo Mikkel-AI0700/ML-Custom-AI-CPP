@@ -7,12 +7,12 @@
 #include <armadillo>
 #include "../../include/class-inheritors/base.hpp"
 #include "../../include/class-inheritors/classifier_mixin.hpp"
+#include "../../include/complex-datatypes/linear_regression_complex.hpp"
 
-using namespace arma;
-
+// TODO: Update the parameter types from arma::rowvec to arma::colvec
 class LinearRegression: public BaseEstimator, public ClassifierMixin {
     public:
-        arma::rowvec weights;
+        arma::colvec weights;
         float bias;
         int epochs;
         float learning_rate;
@@ -21,14 +21,14 @@ class LinearRegression: public BaseEstimator, public ClassifierMixin {
 
         LinearRegression(int epochs, float learning_rate, bool fit_intercept);
 
-        void fit (arma::mat train_x, arma::rowvec train_y) override;
-        arma::rowvec predict (arma::mat test_x) override;
+        void fit (arma::mat& train_x, arma::colvec& train_y) override;
+        arma::rowvec predict (arma::mat& test_x) override;
 
     private:
-        void initialize_weights_bias (arma::mat train_x);
-        arma::rowvec compute_weights_gradients (arma::mat train_x, arma::rowvec train_y, arma::rowvec predictions);
-        double compute_bias_gradients (arma::rowvec train_y, arma::rowvec predictions);
-        void update_weights (arma::rowvec computed_weight_gradients);
+        void initialize_weights_bias (arma::mat& train_x);
+        arma::colvec compute_weights_gradients (arma::mat& train_x, arma::colvec& train_y, arma::colvec& predictions);
+        double compute_bias_gradients (arma::colvec& train_y, arma::colvec& predictions);
+        void update_weights (arma::colvec& computed_weight_gradients);
         void update_bias (float copmputed_bias_gradient);
 };
 
@@ -45,7 +45,7 @@ LinearRegression::LinearRegression (int epochs, float learning_rate, bool fit_in
     };
 };
 
-void LinearRegression::initialize_weights_bias (arma::mat train_x) {
+void LinearRegression::initialize_weights_bias (arma::mat& train_x) {
     weights = weights.zeros(train_x.n_cols);
 
     if (fit_intercept) {
@@ -53,17 +53,17 @@ void LinearRegression::initialize_weights_bias (arma::mat train_x) {
     }
 }
 
-arma::rowvec LinearRegression::compute_weights_gradients (arma::mat train_x, arma::rowvec train_y, arma::rowvec predictions) {
-    arma::rowvec weights_gradient = 1.0 / train_x.n_rows * (train_x * (predictions - train_y));
+arma::colvec LinearRegression::compute_weights_gradients (arma::mat& train_x, arma::colvec& train_y, arma::colvec& predictions) {
+    arma::colvec weights_gradient = 1 / train_x.n_rows * (train_x * (predictions - train_y));
     return weights_gradient;
 }
 
-double LinearRegression::compute_bias_gradients (arma::rowvec train_y, arma::rowvec predictions) {
+double LinearRegression::compute_bias_gradients (arma::colvec& train_y, arma::colvec& predictions) {
     double bias_gradient = 1 / train_y.n_rows * sum((predictions - train_y));
     return bias_gradient;
 }
 
-void LinearRegression::update_weights (arma::rowvec weights_gradient) {
+void LinearRegression::update_weights (arma::colvec& weights_gradient) {
     weights = weights - learning_rate * weights_gradient;
 }
 
@@ -71,26 +71,26 @@ void LinearRegression::update_bias (float bias_gradient) {
     bias = bias - learning_rate * bias_gradient;
 }
 
-void LinearRegression::fit (arma::mat train_x, arma::rowvec train_y) {
+void LinearRegression::fit (arma::mat& train_x, arma::colvec& train_y) {
     LinearRegression::initialize_weights_bias(train_x);
 
-    for (int index = 1; index < epochs; index++) {
+    for (int index = 1; index <= epochs; index++) {
         std::cout << "[+] Epoch: " << index << std::endl;
         std::cout << "[+] Weights: " << weights << std::endl;
         std::cout << "[+] Bias: " << bias << std::endl;
 
         // Main predictions logic
-        arma::rowvec predictions = (train_x * weights.t()) + bias;
+        arma::colvec predictions = (train_x * weights) + bias;
 
         // Weights and bias computing and updating
-        arma::rowvec weight_gradient = LinearRegression::compute_weights_gradients(train_x, train_y, predictions);
+        arma::colvec weight_gradient = LinearRegression::compute_weights_gradients(train_x, train_y, predictions);
         double bias_gradient = LinearRegression::compute_bias_gradients(train_y, predictions);
         LinearRegression::update_weights(weight_gradient);
         LinearRegression::update_bias(bias_gradient);
     }
 }
 
-arma::rowvec LinearRegression::predict (arma::mat test_x) {
+arma::rowvec LinearRegression::predict (arma::mat& test_x) {
     return (test_x * weights) + bias;
 }
 
@@ -100,36 +100,42 @@ int main (int argc, char* argv[]) {
     arma::mat test_x;
     arma::colvec test_y;
     
-    std::vector<std::variant<arma::mat, arma::colvec>> datasets = {
+    TrainTestData datasets = {
         train_x,
         train_y,
         test_x,
         test_y
     };
     
-    std::vector<std::filesystem::path> data_path = {
+    DatasetsFilepaths data_path = {
         "python-data-generators/test-data/train_x.csv",
         "python-data-generators/test-data/train_y.csv",
         "python-data-generators/test-data/test_x.csv",
         "python-data-generators/test-data/test_y.csv"
     };
     
-    try { 
-        if (argc < 2) {
+    try {
+        // Designed to throw std::length_error if user has not provided three arguments
+        if (argc < 3) {
             throw std::length_error("[-] Error: Argument provided is less than two!. Aborting");
         }
 
+        // Designed to throw std::invalid_argument if user has provided a incorrect argument
+        // Such as a character or a string
         LinearRegression linreg_instance(
             std::stoi(std::string(argv[1])),
             std::stof(std::string(argv[2])),
             true
         );
 
-        for (int index = 0; index < data_path.size(); index++) {
+        // Loop to load in the datasets
+        for (int index = 0; index < datasets.size(); index++) {
             if (std::holds_alternative<arma::mat>(datasets[index])) {
                 std::get<arma::mat>(datasets[index]).load(data_path[index]);
+                std::cout << "[+] From C++, loading the training/testing matrices datset" << std::endl;
             } else {
                 std::get<arma::colvec>(datasets[index]).load(data_path[index]);
+                std::cout << "[+] From C++, loading the training/testing column vectors" << std::endl;
             }
         }
 
