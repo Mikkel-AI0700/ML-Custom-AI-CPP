@@ -36,11 +36,11 @@ arma::rowvec BaseEstimator::predict (arma::mat& test_x) {
     ;
 }
 
-arma::rowvec BaseEstimator::predict_proba (arma::mat test_x) {
+arma::rowvec BaseEstimator::predict_proba (arma::mat& test_x) {
     ;
 }
 
-arma::rowvec BaseEstimator::predict_proba_log (arma::mat test_x) {
+arma::rowvec BaseEstimator::predict_proba_log (arma::mat& test_x) {
     ;
 }
 
