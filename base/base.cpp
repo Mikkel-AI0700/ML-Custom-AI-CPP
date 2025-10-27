@@ -28,22 +28,27 @@ void BaseEstimator::set_parameters (
     }
 }
 
+// nopsled as child classess will override definition
 void BaseEstimator::fit (arma::mat& train_x, arma::colvec& train_y) {
     ;
 }
 
+// nopsled as child classess will override definition
 arma::rowvec BaseEstimator::predict (arma::mat& test_x) {
     ;
 }
 
+// nopsled as child classess will override definition
 arma::rowvec BaseEstimator::predict_proba (arma::mat& test_x) {
     ;
 }
 
+// nopsled as child classess will override definition
 arma::rowvec BaseEstimator::predict_proba_log (arma::mat& test_x) {
     ;
 }
 
+// nopsled as child classess will override definition
 void BaseEstimator::save_model (
     const std::string model_save_file,
     const std::filesystem::path save_path
@@ -51,6 +56,7 @@ void BaseEstimator::save_model (
     ;
 }
 
+// nopsled as child classess will override definition
 void BaseEstimator::load_model (std::filesystem::path load_path) {
     ;
 }
