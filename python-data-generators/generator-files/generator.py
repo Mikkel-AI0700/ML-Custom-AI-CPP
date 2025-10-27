@@ -36,7 +36,7 @@ def _write_to_file (filepath: Path, X: pd.DataFrame, Y: pd.DataFrame):
 
     for (dataset, data_filename) in zip(generated_datasets, filenames):
         dataset = pd.DataFrame(dataset)
-        dataset.to_csv(os.path.join(filepath, data_filename))
+        dataset.to_csv(os.path.join(filepath, data_filename), index=False)
 
 def _change_configuration (config_key_value: dict[str, Any], generator_configuration: dict[str, Any]):
     try:
