@@ -20,7 +20,6 @@ class LinearRegression: public BaseEstimator, public ClassifierMixin {
         HashMapParameters parameter_constrains;
 
         LinearRegression(int epochs, float learning_rate, bool fit_intercept);
-
         void fit (arma::mat& train_x, arma::colvec& train_y) override;
         arma::rowvec predict (arma::mat& test_x) override;
 
@@ -46,7 +45,7 @@ LinearRegression::LinearRegression (int epochs, float learning_rate, bool fit_in
 };
 
 void LinearRegression::initialize_weights_bias (arma::mat& train_x) {
-    weights = weights.zeros(train_x.n_cols);
+    weights = arma::zeros<arma::colvec>(train_x.n_cols);
 
     if (fit_intercept) {
         bias = 0.0;
@@ -74,7 +73,11 @@ void LinearRegression::update_bias (float bias_gradient) {
 void LinearRegression::fit (arma::mat& train_x, arma::colvec& train_y) {
     LinearRegression::initialize_weights_bias(train_x);
 
-    for (int index = 1; index <= epochs; index++) {
+    std::cout << "[+] Starting training" << std::endl;
+    std::cout << "[+] Train X rows: " << train_x.n_rows << " Train X cols: " << train_x.n_cols << std::endl;
+    std::cout << "[+] Train Y rows: " << train_y.n_rows << " Train Y cols: " << train_y.n_cols << std::endl;
+
+    for (int index = 0; index < epochs; index++) {
         std::cout << "[+] Epoch: " << index << std::endl;
         std::cout << "[+] Weights: " << weights << std::endl;
         std::cout << "[+] Bias: " << bias << std::endl;
@@ -95,23 +98,22 @@ arma::rowvec LinearRegression::predict (arma::mat& test_x) {
 }
 
 int main (int argc, char* argv[]) {
-    arma::mat train_x;
-    arma::colvec train_y;
-    arma::mat test_x;
-    arma::colvec test_y;
-    
-    TrainTestData datasets = {
-        train_x,
-        train_y,
-        test_x,
-        test_y
-    };
-    
+    TrainTestData datasets = {};
+    std::vector<std::string> dataset_metadata = {"mat", "colvec", "mat", "colvec"};
+
+    for (const auto& dset_metadata : dataset_metadata) {
+        if (dset_metadata == "mat") {
+            datasets.emplace_back(arma::mat{});
+        } else {
+            datasets.emplace_back(arma::colvec{});
+        }
+    }
+
     DatasetsFilepaths data_path = {
-        "python-data-generators/test-data/train_x.csv",
-        "python-data-generators/test-data/train_y.csv",
-        "python-data-generators/test-data/test_x.csv",
-        "python-data-generators/test-data/test_y.csv"
+        "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-data-generators/test-data/regression-data/train_x.csv",
+        "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-data-generators/test-data/regression-data/train_y.csv",
+        "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-data-generators/test-data/regression-data/test_x.csv",
+        "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-data-generators/test-data/regression-data/test_y.csv"
     };
     
     try {
@@ -131,16 +133,16 @@ int main (int argc, char* argv[]) {
         // Loop to load in the datasets
         for (int index = 0; index < datasets.size(); index++) {
             if (std::holds_alternative<arma::mat>(datasets[index])) {
-                std::get<arma::mat>(datasets[index]).load(data_path[index]);
+                std::get<arma::mat>(datasets[index]).load(data_path[index], arma::csv_ascii);
                 std::cout << "[+] From C++, loading the training/testing matrices datset" << std::endl;
             } else {
-                std::get<arma::colvec>(datasets[index]).load(data_path[index]);
+                std::get<arma::colvec>(datasets[index]).load(data_path[index], arma::csv_ascii);
                 std::cout << "[+] From C++, loading the training/testing column vectors" << std::endl;
             }
         }
 
         linreg_instance.fit(
-            std::get<arma::mat>(datasets.at(0)), 
+            std::get<arma::mat>(datasets.at(0)),
             std::get<arma::colvec>(datasets.at(1))
         );
     } catch (const std::invalid_argument& invalid_script_argument) {
