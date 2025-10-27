@@ -62,6 +62,8 @@ function activate_machine_learning_models () {
                 -fdiagnostics-color=always \
                 -fdiagnostics-show-line-numbers \
                 -fdiagnostics-show-caret \
+                -Wall \
+                -Wextra \
                 -O3
             echo "[+] Successfully generated compiled-${algorithm_type}"
         fi
