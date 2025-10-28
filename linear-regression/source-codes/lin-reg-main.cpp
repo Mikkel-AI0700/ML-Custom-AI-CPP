@@ -21,7 +21,7 @@ class LinearRegression: public BaseEstimator, public ClassifierMixin {
 
         LinearRegression(int epochs, float learning_rate, bool fit_intercept);
         void fit (arma::mat& train_x, arma::colvec& train_y) override;
-        arma::rowvec predict (arma::mat& test_x) override;
+        arma::colvec predict (arma::mat& test_x) override;
 
     private:
         void initialize_weights_bias (arma::mat& train_x);
@@ -32,11 +32,9 @@ class LinearRegression: public BaseEstimator, public ClassifierMixin {
 };
 
 LinearRegression::LinearRegression (int epochs, float learning_rate, bool fit_intercept) {
-    weights;
-    bias;
-    epochs = epochs;
-    learning_rate = learning_rate;
-    fit_intercept = fit_intercept;
+    this->epochs = epochs;
+    this->learning_rate = learning_rate;
+    this->fit_intercept = fit_intercept;
     parameter_constrains = {
         {"epochs", epochs},
         {"learning_rate", learning_rate},
@@ -53,12 +51,12 @@ void LinearRegression::initialize_weights_bias (arma::mat& train_x) {
 }
 
 arma::colvec LinearRegression::compute_weights_gradients (arma::mat& train_x, arma::colvec& train_y, arma::colvec& predictions) {
-    arma::colvec weights_gradient = 1 / train_x.n_rows * (train_x * (predictions - train_y));
+    arma::colvec weights_gradient = 1.0 / train_x.n_rows * (train_x.t() * (predictions - train_y));
     return weights_gradient;
 }
 
 double LinearRegression::compute_bias_gradients (arma::colvec& train_y, arma::colvec& predictions) {
-    double bias_gradient = 1 / train_y.n_rows * sum((predictions - train_y));
+    double bias_gradient = 1.0 / train_y.n_rows * sum((predictions - train_y));
     return bias_gradient;
 }
 
@@ -72,10 +70,6 @@ void LinearRegression::update_bias (float bias_gradient) {
 
 void LinearRegression::fit (arma::mat& train_x, arma::colvec& train_y) {
     LinearRegression::initialize_weights_bias(train_x);
-
-    std::cout << "[+] Starting training" << std::endl;
-    std::cout << "[+] Train X rows: " << train_x.n_rows << " Train X cols: " << train_x.n_cols << std::endl;
-    std::cout << "[+] Train Y rows: " << train_y.n_rows << " Train Y cols: " << train_y.n_cols << std::endl;
 
     for (int index = 0; index < epochs; index++) {
         std::cout << "[+] Epoch: " << index << std::endl;
@@ -93,10 +87,12 @@ void LinearRegression::fit (arma::mat& train_x, arma::colvec& train_y) {
     }
 }
 
-arma::rowvec LinearRegression::predict (arma::mat& test_x) {
-    return (test_x * weights) + bias;
+arma::colvec LinearRegression::predict (arma::mat& test_x) {
+    arma::colvec predictions = (test_x * weights) + bias;
+    return predictions;
 }
 
+// Purpose of main function is to provide a way to test the model
 int main (int argc, char* argv[]) {
     TrainTestData datasets = {};
     std::vector<std::string> dataset_metadata = {"mat", "colvec", "mat", "colvec"};
@@ -144,6 +140,15 @@ int main (int argc, char* argv[]) {
         linreg_instance.fit(
             std::get<arma::mat>(datasets.at(0)),
             std::get<arma::colvec>(datasets.at(1))
+        );
+
+        arma::colvec model_predictions = linreg_instance.predict(
+            std::get<arma::mat>(datasets.at(2))
+        );
+
+        model_predictions.save(
+            "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-data-generators/model-predictions/regressor/test_data_one.csv",
+            arma::csv_ascii
         );
     } catch (const std::invalid_argument& invalid_script_argument) {
         std::cerr << "[-] Error: Invalid argument catch triggered" << std::endl;
