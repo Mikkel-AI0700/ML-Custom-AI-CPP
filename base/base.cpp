@@ -34,7 +34,7 @@ void BaseEstimator::fit (arma::mat& train_x, arma::colvec& train_y) {
 }
 
 // nopsled as child classess will override definition
-arma::rowvec BaseEstimator::predict (arma::mat& test_x) {
+arma::colvec BaseEstimator::predict (arma::mat& test_x) {
     ;
 }
 
