@@ -116,6 +116,20 @@ function activate_machine_learning_models () {
     done
 }
 
+function display_help () {
+    echo -e "[-G <Activate GENERATE_COMPILE FLAG>] \n[-C <Activate the METRIC_CHECK flag>]"
+
+    # For the GENERATE_COMPILE Flag
+    echo -e "[-S <Activates the SPEC_METRIC flag, to be used with METRIC_CHECK>] \n[-A <Activates the ALL_METRICS flag, to be used with METRIC_CHECK>]"
+    echo -e "[-a <Provide the C++ ML algorithm to compile>] \n[-d <Provide the type of dataset to make [regression, classification, clustering]>]"
+    echo -e "[-k <Provide the key-value-change to change in the generator configurations>] \n[-s <Skips the dataset generation>]"
+    
+    # For the METRIC_CHECK Flag
+    echo -e "[-m <Provide the metric type for the learning type>]"
+    echo -e "[-S <Activate specific metrics>] \n[-A <Activate all the metrics>] \n[-c <Provide the specific metric>]"
+    echo -e "[-T <Provide the ground truths path>] \n[-P <Provide the model predictions path>]"
+}
+
 function main () {
     # Flags to check to either generate/compile or to check metrics
     local GENERATE_COMPILE=0
@@ -136,7 +150,7 @@ function main () {
     local SPEC_METRIC=0
     local ALL_METRICS=0
 
-    local options="a:d:f:t:p:mSATPcksGC"
+    local options="a:d:f:t:p:mSATPcksGCh"
 
     while getopts "${options}" option_flag; do
         case "${option_flag}" in
@@ -152,6 +166,8 @@ function main () {
             c) speci_metric="${OPTARG}" ;;
             G) GENERATE_COMPILE=1 ;;
             C) METRIC_CHECK=1 ;;
+            h) display_help ;;
+            *) display_help ;;
         esac
     done
 
