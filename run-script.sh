@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # Python's data generator variables
-python_generator_path="$(pwd)/python-data-generators/generator-files/generator.py"
-python_tld="$(pwd)/python-data-generators"
+python_generator_path="$(pwd)/python-utilities/generator-files/generator.py"
+python_model_metric_checker="$(pwd)/python-utilities/performance-metric-checkers/model_metric_checker.py"
+python_tld="$(pwd)/python-utilities"
 
 # Machine learning algorithms file paths
 linreg_source_path="$(pwd)/linear-regression/source-codes/lin-reg-main.cpp"
@@ -39,6 +40,51 @@ function generate_datasets () {
     fi
 }
 
+function evaluate_machine_learning_predictions () {
+    local true_y_path="$1"
+    local predictions_path="$2"
+    local metric_type="$3"
+    local spec_metric="$4"
+    local specs_metrics="$5"
+    local all_metrics="$6"
+
+    if [[ -z "${PYTHONPATH}" && -z "${VIRTUAL_ENV}" ]]; then
+        echo "[-] Error: Cannot run script when both PYTHONPATH and VIRTUAL_ENV is not set"
+        exit 1
+    fi
+
+    if [[ -z "${true_y_path}" || -z "${predictions_path}" ]]; then
+        echo "[-] Error: Both ground truths and predictions path cannot be empty"
+        exit 1
+    fi
+
+    if [[ "${metric_type}" != "regression" || "${metric_type}" != "classification" || "${metric_type}" != "clustering" ]]; then
+        echo "[-] Error: User passed metric type is non-existent"
+        exit 1
+    fi
+
+    # Condition to check if user will run specific metrics
+    if [[ ${specs_metrics} -eq 1 && ! -z "${spec_metric}" ]]; then
+        python3 "${python_model_metric_checker}" \
+            --metric-type "${metric_type}" \
+            --run-spec-metrics \
+            --spec-metric "${spec_metric}" \
+            --true-data "$(pwd)/${true_y_path}" \
+            --predictions "$(pwd)/${predictions_path}"
+    else
+        echo "[-] Error: Must provide a specific metric relative to the chosen metric"
+    fi
+
+    # Condition to check if user will run all metrics according to chosen learning type
+    if [[ ${all_metrics} -eq 1 ]]; then
+        python3 "${python_model_metric_checker}" \
+            --metric-type "${metric_type}" \
+            --run-all-metrics \
+            --true-data "$$(pwd)/{true_y_path}" \
+            --predictions-path "$(pwd)/${predictions_path}"
+    fi
+}
+
 function activate_machine_learning_models () {
     local algorithm_type="$1"
     declare -A ml_algorithms=(
@@ -71,27 +117,59 @@ function activate_machine_learning_models () {
 }
 
 function main () {
+    # Flags to check to either generate/compile or to check metrics
+    local GENERATE_COMPILE=0
+    local METRIC_CHECK=0
+
+    # Generate/Compile options
     local algorithm_type=""
     local dataset_type=""
     local filename=""
     local key_value_change=""
     local skip_dataset_generation=0
 
-    while getopts "m:d:f:s" option_flag; do
+    # Metric checkers options
+    local metric_type=""
+    local true_y_path=""
+    local predictions_path=""
+    local speci_metric=""
+    local SPEC_METRIC=0
+    local ALL_METRICS=0
+
+    local options="a:d:f:t:p:mSATPcksGC"
+
+    while getopts "${options}" option_flag; do
         case "${option_flag}" in
-            m) algorithm_type="${OPTARG}" ;;
+            a) algorithm_type="${OPTARG}" ;;
             d) dataset_type="${OPTARG}" ;;
             k) key_value_change="${OPTARG}" ;;
             s) skip_dataset_generation=1 ;;
+            m) metric_type="${OPTARG}" ;;
+            S) SPEC_METRIC=1 ;;
+            A) ALL_METRICS=1 ;;
+            T) true_y_path="${OPTARG}" ;;
+            P) predictions_path="${OPTARG}" ;;
+            c) speci_metric="${OPTARG}" ;;
+            G) GENERATE_COMPILE=1 ;;
+            C) METRIC_CHECK=1 ;;
         esac
     done
 
-    if [[  -n "${algorithm_type}" ]]; then
+    if [[ ${GENERATE_COMPILE} -eq 1 ]]; then
         echo "[+] Passing on script arguments to generator.py"
-        generate_datasets "${dataset_type}" "${filename}" "${key_value_change}" $skip_dataset_generation
+        generate_datasets "${dataset_type}" "${filename}" "${key_value_change}" ${skip_dataset_generation}
         activate_machine_learning_models "${algorithm_type}"
+    elif [[ ${METRIC_CHECK} -eq 1 ]]; then
+        echo "[+] Passing on the script arguments to model_metric_checker.py"
+        evaluate_machine_learning_predictions \
+            "${true_y_path}" \
+            "${predictions_path}" \
+            "${metric_type}" \
+            "${speci_metric}" \
+            ${SPEC_METRIC} \
+            ${ALL_METRICS}
     else
-        echo "[-] Error: Machine learning algorithm type is not set! Aborting."
+        echo "[-] Error: Either generate/compile or metric_check flag must be set"
         exit 1
     fi
 }
