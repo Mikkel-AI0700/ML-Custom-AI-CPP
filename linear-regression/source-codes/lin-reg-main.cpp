@@ -5,11 +5,10 @@
 #include <format>
 #include <filesystem>
 #include <armadillo>
-#include "../../include/class-inheritors/base.hpp"
-#include "../../include/class-inheritors/classifier_mixin.hpp"
-#include "../../include/complex-datatypes/linear_regression_complex.hpp"
+#include "../../header-source/headers/base-headers/base.hpp"
+#include "../../header-source/headers/base-headers/classifier_mixin.hpp"
+#include "../../header-source/headers/complex-datatypes/linear_regression_complex.hpp"
 
-// TODO: Update the parameter types from arma::rowvec to arma::colvec
 class LinearRegression: public BaseEstimator, public ClassifierMixin {
     public:
         arma::colvec weights;
