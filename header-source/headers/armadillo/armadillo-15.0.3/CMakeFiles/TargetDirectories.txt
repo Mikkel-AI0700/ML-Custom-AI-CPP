@@ -1,0 +1,16 @@
+/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/include/armadillo/armadillo-15.0.3/CMakeFiles/armadillo.dir
+/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/include/armadillo/armadillo-15.0.3/CMakeFiles/test.dir
+/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/include/armadillo/armadillo-15.0.3/CMakeFiles/edit_cache.dir
+/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/include/armadillo/armadillo-15.0.3/CMakeFiles/rebuild_cache.dir
+/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/include/armadillo/armadillo-15.0.3/CMakeFiles/list_install_components.dir
+/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/include/armadillo/armadillo-15.0.3/CMakeFiles/install.dir
+/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/include/armadillo/armadillo-15.0.3/CMakeFiles/install/local.dir
+/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/include/armadillo/armadillo-15.0.3/CMakeFiles/install/strip.dir
+/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/include/armadillo/armadillo-15.0.3/tests1/CMakeFiles/smoke_test.dir
+/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/include/armadillo/armadillo-15.0.3/tests1/CMakeFiles/test.dir
+/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/include/armadillo/armadillo-15.0.3/tests1/CMakeFiles/edit_cache.dir
+/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/include/armadillo/armadillo-15.0.3/tests1/CMakeFiles/rebuild_cache.dir
+/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/include/armadillo/armadillo-15.0.3/tests1/CMakeFiles/list_install_components.dir
+/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/include/armadillo/armadillo-15.0.3/tests1/CMakeFiles/install.dir
+/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/include/armadillo/armadillo-15.0.3/tests1/CMakeFiles/install/local.dir
+/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/include/armadillo/armadillo-15.0.3/tests1/CMakeFiles/install/strip.dir
