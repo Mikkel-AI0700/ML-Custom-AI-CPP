@@ -7,7 +7,7 @@
 #include <armadillo>
 #include "../../header-source/headers/base-headers/base.hpp"
 #include "../../header-source/headers/base-headers/classifier_mixin.hpp"
-#include "../../header-source/headers/complex-datatypes/linear_regression_complex.hpp"
+#include "../../header-source/headers/base-headers/complex.hpp"
 
 class LinearRegression: public BaseEstimator, public ClassifierMixin {
     public:
