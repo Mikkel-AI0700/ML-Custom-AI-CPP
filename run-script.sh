@@ -7,6 +7,7 @@ python_tld="$(pwd)/python-utilities"
 
 # Machine learning algorithms file paths
 linreg_source_path="$(pwd)/linear-regression/source-codes/lin-reg-main.cpp"
+logreg_source_path="$(pwd)/logistic-regression/source-codes/log-reg-main.cpp"
 
 # Directory to place the compiled ML algorithms
 compiled_algorithms_path="$(pwd)/compiled-algorithms"
@@ -35,7 +36,7 @@ function generate_datasets () {
             --dataset-type "${dataset_type}" \
             --key-value-change "${key_value_change}"
     else
-        echo "[*] Training and testing dataset generation skipped. Proceeding to compilation"
+        echo "[*] Training and testing dataset generation skipped. You may now proceed to compilation"
         return
     fi
 }
@@ -89,6 +90,7 @@ function activate_machine_learning_models () {
     local algorithm_type="$1"
     declare -A ml_algorithms=(
         ["linreg"]="${linreg_source_path}"
+        ["logreg"]='${logreg_source_path}"
     )
 
     for ml_key in "${!ml_algorithms[@]}"; do
@@ -132,8 +134,9 @@ function display_help () {
 
 function main () {
     # Flags to check to either generate/compile or to check metrics
-    local GENERATE_COMPILE=0
+    local GENERATE_DATASETS=0
     local METRIC_CHECK=0
+    local COMPILE_ML=0
 
     # Generate/Compile options
     local algorithm_type=""
@@ -150,7 +153,7 @@ function main () {
     local SPEC_METRIC=0
     local ALL_METRICS=0
 
-    local options="a:d:f:t:p:mSATPcksGCh"
+    local options="a:d:f:t:p:mSATPcksGCOh"
 
     while getopts "${options}" option_flag; do
         case "${option_flag}" in
@@ -164,7 +167,8 @@ function main () {
             T) true_y_path="${OPTARG}" ;;
             P) predictions_path="${OPTARG}" ;;
             c) speci_metric="${OPTARG}" ;;
-            G) GENERATE_COMPILE=1 ;;
+            O) COMPILE_ML=1 ;;
+            G) GENERATE_DATASETS=1 ;;
             C) METRIC_CHECK=1 ;;
             h) display_help ;;
             *) display_help ;;
@@ -174,6 +178,8 @@ function main () {
     if [[ ${GENERATE_COMPILE} -eq 1 ]]; then
         echo "[+] Passing on script arguments to generator.py"
         generate_datasets "${dataset_type}" "${filename}" "${key_value_change}" ${skip_dataset_generation}
+    elif [[]]; then
+        echo "[+] Passing on scripts to compile the machine learning algorithm"
         activate_machine_learning_models "${algorithm_type}"
     elif [[ ${METRIC_CHECK} -eq 1 ]]; then
         echo "[+] Passing on the script arguments to model_metric_checker.py"
