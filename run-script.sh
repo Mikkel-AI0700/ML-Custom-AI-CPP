@@ -22,12 +22,7 @@ function generate_datasets () {
         echo -n "[+] Python TLD set: $(echo ${PYTHONPATH})\n [+] Venv set: $(echo ${VIRTUAL_ENV})"
     else
         export PYTHONPATH=${python_tld} && echo "[*] TLD set: ${PYTHONPATH}"
-        source python-data-generators/generator-venv/bin/activate && echo "[*] VENV set: ${VIRTUAL_ENV}"
-    fi
-
-    if [[ -n "${dataset_type}" && ${skip_data_generation} -eq 1 ]]; then
-        echo "[-] Error: Dataset type is set but skip dataset generation flag is also set"
-        exit 1
+        source python-utilities/generator-venv/bin/activate && echo "[*] VENV set: ${VIRTUAL_ENV}"
     fi
 
     if [[ ! ${skip_data_generation} -eq 1 ]]; then
@@ -90,7 +85,7 @@ function activate_machine_learning_models () {
     local algorithm_type="$1"
     declare -A ml_algorithms=(
         ["linreg"]="${linreg_source_path}"
-        ["logreg"]='${logreg_source_path}"
+        ["logreg"]="${logreg_source_path}"
     )
 
     for ml_key in "${!ml_algorithms[@]}"; do
@@ -102,8 +97,8 @@ function activate_machine_learning_models () {
         fi
 
         if [[ "${ml_key}" == "${algorithm_type}" ]]; then
-            g++ "${ml_value}" "$(pwd)/base/base.cpp" -o "${compiled_algorithms_path}/compiled-${algorithm_type}" \
-                -Iinclude \
+            g++ "${ml_value}" -o "${compiled_algorithms_path}/compiled-${algorithm_type}" \
+                -Iheader-source \
                 -larmadillo \
                 -lblas \
                 -llapack \
@@ -119,7 +114,7 @@ function activate_machine_learning_models () {
 }
 
 function display_help () {
-    echo -e "[-G <Activate GENERATE_COMPILE FLAG>] \n[-C <Activate the METRIC_CHECK flag>]"
+    echo -e "[-G <Activate GENERATE_DATASETS FLAG>] \n[-C <Activate the METRIC_CHECK flag>] \n[-O <Activate the COMPILE_ML flag>]"
 
     # For the GENERATE_COMPILE Flag
     echo -e "[-S <Activates the SPEC_METRIC flag, to be used with METRIC_CHECK>] \n[-A <Activates the ALL_METRICS flag, to be used with METRIC_CHECK>]"
@@ -175,10 +170,10 @@ function main () {
         esac
     done
 
-    if [[ ${GENERATE_COMPILE} -eq 1 ]]; then
+    if [[ ${GENERATE_DATASETS} -eq 1 ]]; then
         echo "[+] Passing on script arguments to generator.py"
         generate_datasets "${dataset_type}" "${filename}" "${key_value_change}" ${skip_dataset_generation}
-    elif [[]]; then
+    elif [[ ${COMPILE_ML} -eq 1 ]]; then
         echo "[+] Passing on scripts to compile the machine learning algorithm"
         activate_machine_learning_models "${algorithm_type}"
     elif [[ ${METRIC_CHECK} -eq 1 ]]; then
