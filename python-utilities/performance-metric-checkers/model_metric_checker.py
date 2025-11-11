@@ -1,6 +1,7 @@
 import argparse
 from typing import Callable
 import numpy as np
+import pandas as pd
 from sklearn.metrics import (
     mean_squared_error,
     mean_absolute_error,
@@ -14,12 +15,12 @@ from sklearn.metrics import (
 )
 
 def _determine_run_type (
-    will_run_all: bool = False,
-    will_run_spec: bool = False,
     spec_metric: str,
     metrics_references_dict: dict[str, Callable],
     test_y: np.ndarray,
-    predictions: np.ndarray
+    predictions: np.ndarray,
+    will_run_all: bool = False,
+    will_run_spec: bool = False,
 ):
     if will_run_all:
         _run_all_metrics(metrics_references_dict, test_y, predictions)
