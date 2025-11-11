@@ -1,7 +1,7 @@
 #include <iostream>
 #include <filesystem>
 #include <armadillo>
-#include "../../headers/cpp-utilities/loader.hpp"
+#include "headers/cpp-utilities/loader.hpp"
 
 void DatasetOperations::construct_datasets () {
     datasets_vector.emplace_back(arma::mat{});
