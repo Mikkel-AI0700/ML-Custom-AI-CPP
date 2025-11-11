@@ -4,7 +4,7 @@
 #include <string>
 #include <filesystem>
 #include <armadillo>
-#include "../complex-datatypes/complex.hpp"
+#include "complex-datatypes/complex_datatypes.hpp"
 
 class BaseEstimator {
     public:
