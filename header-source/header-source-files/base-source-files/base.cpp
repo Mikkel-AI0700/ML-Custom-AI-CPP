@@ -4,8 +4,8 @@
 #include <algorithm>
 #include <armadillo>
 #include <filesystem>
-#include "../include/class-inheritors/base.hpp"
-#include "../include/complex-datatypes/complex.hpp"
+#include "base-headers/base.hpp"
+#include "complex-datatypes/complex_datatypes.hpp"
 
 HashMapParameters BaseEstimator::get_parameters (HashMapParameters hyperparameter_hashmap) {
     return hyperparameter_hashmap;
