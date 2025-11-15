@@ -1,5 +1,6 @@
 #include <iostream>
 #include <filesystem>
+#include <format>
 #include <armadillo>
 #include "complex-datatypes/complex_datatypes.hpp"
 #include "cpp-utilities/loader.hpp"
@@ -56,12 +57,21 @@ void DatasetOperations::load_datasets (
     }
 }
 
-void DatasetOperations::save_dataset (std::string save_mode, arma::colvec model_predictions) {
+void DatasetOperations::save_dataset (std::string save_mode, std::string model_filename, arma::colvec model_predictions) {
     if (save_mode == "regression") {
-        model_predictions.save(save_paths.regression_save_path, arma::csv_ascii);
+        model_predictions.save(
+            std::format(save_paths.regression_save_path.string(), model_filename),
+            arma::csv_ascii
+        );
     } else if (save_mode == "classification") {
-        model_predictions.save(save_paths.classification_save_path, arma::csv_ascii);
+        model_predictions.save(
+            std::format(save_paths.classification_save_path.string()),
+            arma::csv_ascii
+        );
     } else {
-        model_predictions.save(save_paths.clustering_save_path, arma::csv_ascii);
+        model_predictions.save(
+            std::format(save_paths.clustering_save_path.string()),
+            arma::csv_ascii
+        );
     }
 }
