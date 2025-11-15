@@ -1,12 +1,13 @@
 #include <iostream>
-#include <cctype>
 #include <string>
 #include <exception>
 #include <format>
 #include <filesystem>
 #include <armadillo>
+#include <variant>
 #include "base-headers/base.hpp"
 #include "base-headers/classifier_mixin.hpp"
+#include "cpp-utilities/loader.hpp"
 #include "complex-datatypes/complex_datatypes.hpp"
 
 class LinearRegression: public BaseEstimator, public ClassifierMixin {
@@ -72,7 +73,7 @@ void LinearRegression::fit (arma::mat& train_x, arma::colvec& train_y) {
 
     for (int index = 0; index < epochs; index++) {
         std::cout << "[+] Epoch: " << index << std::endl;
-        std::cout << "[+] Weights: " << weights << std::endl;
+        std::cout << "[+] Weights: " << weights.t() << std::endl;
         std::cout << "[+] Bias: " << bias << std::endl;
 
         // Main predictions logic
@@ -93,69 +94,33 @@ arma::colvec LinearRegression::predict (arma::mat& test_x) {
 
 // Purpose of main function is to provide a way to test the model
 int main (int argc, char* argv[]) {
-    TrainTestData datasets = {};
-    std::vector<std::string> dataset_metadata = {"mat", "colvec", "mat", "colvec"};
+    DatasetOperations dset_op;
+    LinearRegression linreg_instance(
+        std::stoi(argv[1]),
+        std::stof(argv[2]),
+        true
+    );
 
-    for (const auto& dset_metadata : dataset_metadata) {
-        if (dset_metadata == "mat") {
-            datasets.emplace_back(arma::mat{});
-        } else {
-            datasets.emplace_back(arma::colvec{});
-        }
-    }
+    dset_op.construct_datasets();
+    dset_op.load_datasets(
+        std::string(argv[3]),
+        std::string(argv[4]),
+        std::string(argv[5]),
+        std::string(argv[6])
+    );
 
-    DatasetsFilepaths data_path = {
-        "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-data-generators/test-data/regression-data/train_x.csv",
-        "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-data-generators/test-data/regression-data/train_y.csv",
-        "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-data-generators/test-data/regression-data/test_x.csv",
-        "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-data-generators/test-data/regression-data/test_y.csv"
-    };
-    
-    try {
-        // Designed to throw std::length_error if user has not provided three arguments
-        if (argc < 3) {
-            throw std::length_error("[-] Error: Argument provided is less than two!. Aborting");
-        }
+    linreg_instance.fit(
+        std::get<arma::mat>(dset_op.datasets_vector.at(0)),
+        std::get<arma::colvec>(dset_op.datasets_vector.at(1))
+    );
 
-        // Designed to throw std::invalid_argument if user has provided a incorrect argument
-        // Such as a character or a string
-        LinearRegression linreg_instance(
-            std::stoi(std::string(argv[1])),
-            std::stof(std::string(argv[2])),
-            true
-        );
+    arma::colvec predictions = linreg_instance.predict(
+        std::get<arma::mat>(dset_op.datasets_vector.at(2))
+    );
 
-        // Loop to load in the datasets
-        for (int index = 0; index < datasets.size(); index++) {
-            if (std::holds_alternative<arma::mat>(datasets[index])) {
-                std::get<arma::mat>(datasets[index]).load(data_path[index], arma::csv_ascii);
-                std::cout << "[+] From C++, loading the training/testing matrices datset" << std::endl;
-            } else {
-                std::get<arma::colvec>(datasets[index]).load(data_path[index], arma::csv_ascii);
-                std::cout << "[+] From C++, loading the training/testing column vectors" << std::endl;
-            }
-        }
-
-        linreg_instance.fit(
-            std::get<arma::mat>(datasets.at(0)),
-            std::get<arma::colvec>(datasets.at(1))
-        );
-
-        arma::colvec model_predictions = linreg_instance.predict(
-            std::get<arma::mat>(datasets.at(2))
-        );
-
-        model_predictions.save(
-            "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-data-generators/model-predictions/regressor/test_data_one.csv",
-            arma::csv_ascii
-        );
-    } catch (const std::invalid_argument& invalid_script_argument) {
-        std::cerr << "[-] Error: Invalid argument catch triggered" << std::endl;
-        std::cerr << invalid_script_argument.what() << std::endl;
-    }
-    catch (const std::length_error& invalid_argument_length) {
-        std::cerr << "[-] Error: Invalid argument length catch triggered" << std::endl;
-        std::cerr << invalid_argument_length.what() << std::endl;
-    }
+    dset_op.save_dataset(
+        "regression",
+        predictions
+    ); 
 }
 
