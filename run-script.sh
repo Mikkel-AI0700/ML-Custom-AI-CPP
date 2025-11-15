@@ -97,18 +97,26 @@ function activate_machine_learning_models () {
         fi
 
         if [[ "${ml_key}" == "${algorithm_type}" ]]; then
-            g++ "${ml_value}" -o "${compiled_algorithms_path}/compiled-${algorithm_type}" \
-                -Iheader-source \
+            echo "Compiling: ${compiled_algorithms_path}/compiled-${algorithm_type}"
+            clang++ "${ml_value}" -o "${compiled_algorithms_path}/compiled-${algorithm_type}" \
+                header-source/header-source-files/base-source-files/base.cpp \
+                header-source/header-source-files/base-source-files/classifier_mixin.cpp \
+                header-source/header-source-files/cpp-utilities-source-files/loader.cpp \
+                -Iheader-source/headers/ \
                 -larmadillo \
                 -lblas \
                 -llapack \
-                -fdiagnostics-color=always \
-                -fdiagnostics-show-line-numbers \
-                -fdiagnostics-show-caret \
-                -Wall \
-                -Wextra \
+                -fcaret-diagnostics \
+                -fshow-column \
                 -O3
-            echo "[+] Successfully generated compiled-${algorithm_type}"
+        fi
+
+        if [[ $? -eq 0 ]]; then
+            echo "[+] Successfully compiled: ${compiled_algorithms_path}/compiled-${algorithm_type}"
+            exit 0
+        else
+            echo "[-] Error: Something went wrong compiling: ${compiled_algorithms_path}/compiled-${algorithm_type}"
+            exit 1
         fi
     done
 }
