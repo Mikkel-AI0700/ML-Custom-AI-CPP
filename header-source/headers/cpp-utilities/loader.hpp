@@ -1,11 +1,14 @@
+#ifndef CPP_LOADER_UTILITIES_HPP
+#define CPP_LOADER_UTILITIES_HPP
+
 #include <filesystem>
 #include <armadillo>
-#include "headers/cpp-utilities/loader.hpp"
+#include "cpp-utilities/loader.hpp"
 
-struct SavePaths = {
-    std::filesystem::path regression_save_path = "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-utilities/model-predictions/regressor";
-    std::filesystem::path classification_save_path = "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-utilities/model-predictions/classification";
-    std::filesystem::path clustering_save_path = "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-utilities/model-predictions/clustering";
+struct SavePaths {
+    std::filesystem::path regression_save_path = "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-utilities/model-predictions/regressor/";
+    std::filesystem::path classification_save_path = "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-utilities/model-predictions/classification/";
+    std::filesystem::path clustering_save_path = "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-utilities/model-predictions/clustering/";
 };
 
 class DatasetOperations {
@@ -20,8 +23,10 @@ class DatasetOperations {
             std::filesystem::path test_y
         );
         void save_dataset (
-            std::string save_type
-            arma::colvec model_predictions,
+            std::string save_type,
+            arma::colvec model_predictions
         );
 };
+
+#endif
 
