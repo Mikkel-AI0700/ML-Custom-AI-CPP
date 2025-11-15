@@ -1,7 +1,10 @@
 #include <iostream>
 #include <filesystem>
 #include <armadillo>
-#include "headers/cpp-utilities/loader.hpp"
+#include "complex-datatypes/complex_datatypes.hpp"
+#include "cpp-utilities/loader.hpp"
+
+struct SavePaths save_paths;
 
 void DatasetOperations::construct_datasets () {
     datasets_vector.emplace_back(arma::mat{});
@@ -16,25 +19,35 @@ void DatasetOperations::load_datasets (
     std::filesystem::path test_x,
     std::filesystem::path test_y
 ) {
-    TrainTestData temp_filepaths = {train_x, train_y, test_x, test_y};
+    DatasetsFilepaths temp_filepaths = {train_x, train_y, test_x, test_y};
     try {
-        for (int index = 0; index < temp_filepaths.size(); index++) {
-            if (!std::filesystem::exists(temp_filepaths[index])) {
-                throw new std::filesystem::filesystem_error("[-] Error: Filepath does not exist");
+        for (auto& dataset_path : temp_filepaths) {
+            if (!std::filesystem::exists(dataset_path)) {
+                throw std::filesystem::filesystem_error(
+                    "[-] Error: File/Filepath doesn't exist",
+                    dataset_path,
+                    std::make_error_code(std::errc::no_such_file_or_directory)
+                );
             }
-            if (std::filesystem::is_directory(temp_filepaths[index])) {
-                throw new std::filesystem::filesystem_error("[-] Error: Filesystem path leads to a directory");
+            if (!std::filesystem::is_regular_file(dataset_path)) {
+                throw std::filesystem::filesystem_error(
+                    "[-] Error: Filepath isn't a file and/or leads to a directory",
+                    dataset_path,
+                    std::make_error_code(std::errc::is_a_directory)
+                );
             }
-            if (!std::filesystem::file_size(temp_filepaths[index]) > 0) {
-                throw new std::filesystem::filesystem_error("[-] Error: File isn't a directory and exists but doesn't have content");
+            if (std::filesystem::file_size(dataset_path) == 0) {
+                throw std::runtime_error("[-] Error: Provided path isn't a directory and is a file but empty");
             }
         }
 
         for (int index = 0; index < temp_filepaths.size(); index++) {
             if (std::holds_alternative<arma::mat>(datasets_vector[index])) {
                 std::get<arma::mat>(datasets_vector[index]).load(temp_filepaths[index], arma::csv_ascii);
+                std::cout << "[+] Loaded a arma::mat dataset" << std::endl;
             } else {
                 std::get<arma::colvec>(datasets_vector[index]).load(temp_filepaths[index], arma::csv_ascii);
+                std::cout << "[+] Loaded a arma::colvec dataset" << std::endl;
             }
         }
     } catch (const std::filesystem::filesystem_error& dataset_path_error) {
@@ -43,13 +56,12 @@ void DatasetOperations::load_datasets (
     }
 }
 
-void DatasetOperations::save_datasets (std::string save_type, arma::colvec model_predictions) {
-    if (save_type == "regression") {
-        model_predictions.save(SavePaths.regression_save_path, arma::csv_ascii);
-    } else if (save_type == ) {
-        model_predictions.save(SavePaths.classification_save_path, arma::csv_ascii);
+void DatasetOperations::save_dataset (std::string save_mode, arma::colvec model_predictions) {
+    if (save_mode == "regression") {
+        model_predictions.save(save_paths.regression_save_path, arma::csv_ascii);
+    } else if (save_mode == "classification") {
+        model_predictions.save(save_paths.classification_save_path, arma::csv_ascii);
     } else {
-        model_predictions.save(SavePaths.clustering_save_path, arma::csv_ascii);
+        model_predictions.save(save_paths.clustering_save_path, arma::csv_ascii);
     }
 }
-
