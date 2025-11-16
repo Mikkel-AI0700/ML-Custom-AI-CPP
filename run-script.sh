@@ -102,6 +102,7 @@ function activate_machine_learning_models () {
                 header-source/header-source-files/base-source-files/base.cpp \
                 header-source/header-source-files/base-source-files/classifier_mixin.cpp \
                 header-source/header-source-files/cpp-utilities-source-files/loader.cpp \
+                --std=c++23 \
                 -Iheader-source/headers/ \
                 -larmadillo \
                 -lblas \
