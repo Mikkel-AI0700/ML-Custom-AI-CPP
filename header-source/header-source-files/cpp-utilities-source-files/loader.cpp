@@ -58,19 +58,27 @@ void DatasetOperations::load_datasets (
 }
 
 void DatasetOperations::save_dataset (std::string save_mode, std::string model_filename, arma::colvec model_predictions) {
+    std::string_view filepath_to_save = "{}{}";
+
     if (save_mode == "regression") {
+        std::string temporary_regression_path = save_paths.regression_save_path.string();
+        auto regression_args_format = std::make_format_args(temporary_regression_path, model_filename);
         model_predictions.save(
-            std::format(save_paths.regression_save_path.string(), model_filename),
+            std::vformat(filepath_to_save, regression_args_format),
             arma::csv_ascii
         );
     } else if (save_mode == "classification") {
+        std::string temporary_classification_path = save_paths.classification_save_path.string();
+        auto classification_args_format = std::make_format_args(temporary_classification_path, model_filename);
         model_predictions.save(
-            std::format(save_paths.classification_save_path.string()),
+            std::vformat(filepath_to_save, classification_args_format),
             arma::csv_ascii
         );
     } else {
+        std::string temporary_clustering_path = save_paths.clustering_save_path.string();
+        auto clustering_args_format = std::make_format_args(temporary_clustering_path, model_filename);
         model_predictions.save(
-            std::format(save_paths.clustering_save_path.string()),
+            std::vformat(filepath_to_save, clustering_args_format),
             arma::csv_ascii
         );
     }
