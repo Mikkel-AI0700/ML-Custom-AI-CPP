@@ -72,7 +72,7 @@ void LinearRegression::fit (arma::mat& train_x, arma::colvec& train_y) {
     LinearRegression::initialize_weights_bias(train_x);
 
     for (int index = 0; index < epochs; index++) {
-        std::cout << "[+] Epoch: " << index << std::endl;
+        std::cout << "[+] Epoch: " << (index + 1) << std::endl;
         std::cout << "[+] Weights: " << weights.t() << std::endl;
         std::cout << "[+] Bias: " << bias << std::endl;
 
@@ -94,6 +94,10 @@ arma::colvec LinearRegression::predict (arma::mat& test_x) {
 
 // Purpose of main function is to provide a way to test the model
 int main (int argc, char* argv[]) {
+    if (argc < 7) {
+        throw std::range_error("[-] Error: Argument count must be 8");
+    }
+
     DatasetOperations dset_op;
     LinearRegression linreg_instance(
         std::stoi(argv[1]),
@@ -120,6 +124,7 @@ int main (int argc, char* argv[]) {
 
     dset_op.save_dataset(
         "regression",
+        std::string(argv[7]),
         predictions
     ); 
 }
