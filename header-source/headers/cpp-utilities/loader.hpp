@@ -24,6 +24,7 @@ class DatasetOperations {
         );
         void save_dataset (
             std::string save_type,
+            std::string model_filename,
             arma::colvec model_predictions
         );
 };
