@@ -94,7 +94,7 @@ arma::colvec LinearRegression::predict (arma::mat& test_x) {
 
 // Purpose of main function is to provide a way to test the model
 int main (int argc, char* argv[]) {
-    if (argc < 7) {
+    if (argc < 8) {
         throw std::range_error("[-] Error: Argument count must be 8");
     }
 
@@ -122,8 +122,9 @@ int main (int argc, char* argv[]) {
         std::get<arma::mat>(dset_op.datasets_vector.at(2))
     );
 
+    std::string regression_save_type = "regression";
     dset_op.save_dataset(
-        "regression",
+        regression_save_type,
         std::string(argv[7]),
         predictions
     ); 
