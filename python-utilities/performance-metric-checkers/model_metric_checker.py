@@ -15,13 +15,16 @@ from sklearn.metrics import (
 )
 
 def _determine_run_type (
-    spec_metric: str,
     metrics_references_dict: dict[str, Callable],
+    spec_metric: str,
     test_y: np.ndarray,
     predictions: np.ndarray,
     will_run_all: bool = False,
     will_run_spec: bool = False,
 ):
+    test_y = test_y.reshape((-1, 1))
+    predictions = predictions.reshape((-1, 1))
+
     if will_run_all:
         _run_all_metrics(metrics_references_dict, test_y, predictions)
 
@@ -33,7 +36,7 @@ def _run_all_metrics (
     test_y: np.ndarray,
     predictions: np.ndarray
 ):
-    for (metric_name, metric_reference) in metrics_references_dict.keys():
+    for (metric_name, metric_reference) in metrics_references_dict.items():
         print(f"[+] {metric_name} -> {metric_reference(test_y, predictions)}")
 
 def _run_individual (
@@ -61,6 +64,7 @@ def main ():
     classification_metrics = {
         "accuracy": accuracy_score,
         "precision": precision_score,
+        "recall": recall_score,
         "fi": f1_score
     }
 
@@ -69,12 +73,12 @@ def main ():
         "vs": v_measure_score
     }
 
-    argp = argparse.ArgumentHelper(description="Evaluating the metrics of C++ ML models")
-    argp.add_argument("--metric-type", required=True, action="store_true", dest="metric_type")
+    argp = argparse.ArgumentParser(description="Evaluating the metrics of C++ ML models")
+    argp.add_argument("--metric-type", required=True, dest="metric_type")
     argp.add_argument("--run-all-metrics", required=False, action="store_true", dest="all_metrics")
     argp.add_argument("--run-spec-metric", required=False, action="store_true", dest="spec_metrics")
     argp.add_argument("--spec-metric", required=False, dest="spec_metric")
-    argp.add_argument("--train-data", required=True, dest="train_y")
+    argp.add_argument("--train-data", required=True, dest="test_y")
     argp.add_argument("--predictions", required=True, dest="predictions")
 
     try:
@@ -85,34 +89,35 @@ def main ():
 
         if args.metric_type == "regression":
             _determine_run_type(
-                args.all_metrics,
-                args.spec_metrics,
-                args.spec_metric,
                 regressor_metrics,
-                np.asarray(args.train_y),
-                np.asarray(args.predictions)
+                args.spec_metric,
+                np.genfromtxt(args.test_y, delimiter=","),
+                np.genfromtxt(args.predictions, delimiter=","),
+                args.all_metrics,
+                args.spec_metrics
             )
 
         if args.metric_type == "classification":
             _determine_run_type(
-                args.all_metrics,
-                args.spec_metrics,
-                args.spec_metric,
                 classification_metrics,
-                np.asarray(args.train_y),
-                np.asarray(args.predictions)
+                args.spec_metric,
+                np.genfromtxt(args.test_y, delimiter=","),
+                np.genfromtxt(args.predictions, delimiter=","),
+                args.all_metrics,
+                args.spec_metrics
             )
 
         if args.metric_type == "clustering":
             _determine_run_type(
-                args.all_metrics,
-                args.spec_metrics,
-                args.spec_metric,
                 clustering_metrics,
-                np.asarray(args.train_y),
-                np.asarray(args.predictions)
+                args.spec_metric,
+                np.genfromtxt(args.test_y, delimiter=","),
+                np.genfromtxt(args.predictions, delimiter=","),
+                args.all_metrics,
+                args.spec_metrics
             )
     except ValueError as incorrect_argument_error:
         print(incorrect_argument_error)
         exit(1)
 
+main()
