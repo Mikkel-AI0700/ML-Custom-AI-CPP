@@ -6,7 +6,7 @@
 #include "cpp-utilities/loader.hpp"
 
 struct SavePaths {
-    std::filesystem::path regression_save_path = "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-utilities/model-predictions/regressor/";
+    std::filesystem::path regression_save_path = "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-utilities/model-predictions/regression/";
     std::filesystem::path classification_save_path = "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-utilities/model-predictions/classification/";
     std::filesystem::path clustering_save_path = "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-utilities/model-predictions/clustering/";
 };
