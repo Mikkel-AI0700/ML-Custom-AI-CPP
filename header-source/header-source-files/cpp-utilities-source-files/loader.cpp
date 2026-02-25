@@ -2,8 +2,8 @@
 #include <filesystem>
 #include <format>
 #include <armadillo>
-#include "complex-datatypes/complex_datatypes.hpp"
-#include "cpp-utilities/loader.hpp"
+#include "complex_datatypes.hpp"
+#include "loader.hpp"
 
 struct SavePaths save_paths;
 
