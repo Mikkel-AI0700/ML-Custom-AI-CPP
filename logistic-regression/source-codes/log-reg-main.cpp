@@ -1,5 +1,4 @@
 #include <iostream>
-#include <cmath>
 #include <armadillo>
 #include "base-headers/base.hpp"
 #include "base-headers/classifier_mixin.hpp"
@@ -53,7 +52,7 @@ arma::vec LogisticRegression::sigmoid (arma::vec& logits) {
 }
 
 arma::vec LogisticRegression::compute_weights_gradients (arma::mat& train_x, arma::vec& train_y, arma::vec& predictions) {
-    arma::vec computed_gradients = 1.0 / train_x.n_rows * train_x * (predictions - train_y);
+    arma::vec computed_gradients = 1.0 / train_x.n_rows * (train_x * (predictions - train_y));
     return computed_gradients;
 }
 
@@ -81,8 +80,8 @@ void LogisticRegression::fit (arma::mat& train_x, arma::vec& train_y) {
         arma::vec predictions = (train_x * weights) + bias;
         arma::vec sigmoided = LogisticRegression::sigmoid(predictions);
 
-        arma::vec computed_weights = LogisticRegression::compute_weights_gradients(train_x, train_y, predictions);
-        double computed_bias = LogisticRegression::compute_bias_gradients(train_y, predictions);
+        arma::vec computed_weights = LogisticRegression::compute_weights_gradients(train_x, train_y, sigmoided);
+        double computed_bias = LogisticRegression::compute_bias_gradients(train_y, sigmoided);
         LogisticRegression::update_weights(computed_weights);
         LogisticRegression::update_bias(computed_bias);
     }
@@ -99,5 +98,30 @@ int main (int argc, char* argv[]) {
         throw std::runtime_error("[-] Error: Argument count must be exactly 8");
     }
 
+    DatasetOperations dset_oper;
     LogisticRegression logreg_instance (std::stoi(argv[1]), std::stof(argv[2]), true);
+
+    dset_oper.construct_datasets();
+    dset_oper.load_datasets(
+        std::filesystem::path(argv[3]),
+        std::filesystem::path(argv[4]),
+        std::filesystem::path(argv[5]),
+        std::filesystem::path(argv[6])
+    );
+
+    logreg_instance.fit(
+        std::get<arma::mat>(dset_oper.datasets_vector.at(0)),
+        std::get<arma::vec>(dset_oper.datasets_vector.at(1))
+    );
+
+    arma::vec logreg_preds = logreg_instance.predict(
+        std::get<arma::mat>(dset_oper.datasets_vector.at(2))
+    );
+
+    dset_oper.save_dataset(
+        "classification", 
+        std::string(argv[7]),
+        logreg_preds
+    );
+    
 }
