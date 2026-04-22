@@ -6,10 +6,8 @@
 #include <string>
 #include <armadillo>
 
-using namespace arma;
-
 class ClassifierMixin {
-    float score (rowvec predictions, rowvec test_y);
+    float score (arma::vec& predictions, arma::vec& test_y);
 };
 
 #endif

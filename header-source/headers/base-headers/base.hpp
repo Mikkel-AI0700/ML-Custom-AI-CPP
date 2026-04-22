@@ -4,7 +4,7 @@
 #include <string>
 #include <filesystem>
 #include <armadillo>
-#include "complex-datatypes/complex_datatypes.hpp"
+#include "complex_datatypes.hpp"
 
 class BaseEstimator {
     public:
@@ -13,8 +13,8 @@ class BaseEstimator {
         virtual HashMapParameters get_parameters (HashMapParameters hyperparameter_hashmap);
         virtual void set_parameters (HashMapParameters original_hyperparameters, HashMapParameters user_hyperparameters);
 
-        virtual void fit (arma::mat& train_x, arma::colvec& train_y);
-        virtual arma::colvec predict (arma::mat& test_x);
+        virtual void fit (arma::mat& train_x, arma::vec& train_y);
+        virtual arma::vec predict (arma::mat& test_x);
         virtual arma::rowvec predict_proba (arma::mat& test_x);
         virtual arma::rowvec predict_proba_log (arma::mat& test_x);
 
