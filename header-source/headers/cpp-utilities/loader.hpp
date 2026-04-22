@@ -3,7 +3,7 @@
 
 #include <filesystem>
 #include <armadillo>
-#include "cpp-utilities/loader.hpp"
+#include "loader.hpp"
 
 struct SavePaths {
     std::filesystem::path regression_save_path = "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-utilities/model-predictions/regression/";
