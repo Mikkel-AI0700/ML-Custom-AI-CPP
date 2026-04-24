@@ -42,7 +42,8 @@ arma::vec DecisionTreeClassifier::compute_class_probability (arma::vec& Y) {
 
     for (int i = 0; i < labels.size(); i++) {
         if (classes_to_index.contains(labels[i])) {
-            probability_vector.at(classes_to_index.at(labels[i])) = label_counts[i] / Y.n_elem;
+            int index = classes_to_index.at(labels[i]);
+            probability_vector.at(classes_to_index.at(index)) = label_counts[i] / Y.n_elem;
         }
     }
 
@@ -61,6 +62,24 @@ float DecisionTreeClassifier::compute_entropy (arma::vec& Y) {
     arma::vec probability_vector = probability_vector.elem(probability_vector_above_zero);
     float computed_entropy = -(arma::sum(probability_vector * arma::log2(probability_vector)));
     return computed_entropy;
+}
+
+float DecisionTreeClassifier::compute_information_gain (
+    arma::vec& Y, 
+    arma::mat& left_subset,
+    arma::mat& right_subset
+) {
+
+}
+
+float DecisionTreeClassifier::determine_impurity_metric (arma::vec& Y) {
+    if (split_metric == "gini") {
+        return DecisionTreeClassifier::compute_impurity(Y);
+    } else if (split_metric == "entropy") {
+        return DecisionTreeClassifier::compute_entropy(Y);
+    } else {
+
+    }
 }
 
 int main () {
