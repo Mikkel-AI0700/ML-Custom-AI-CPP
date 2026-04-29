@@ -1,7 +1,11 @@
 #include <iostream>
+#include <cmath>
 #include <map>
+#include <algorithm>
+#include <generator>
 #include <vector>
 #include <variant>
+#include <cstdlib>
 #include <armadillo>
 #include "loader.hpp"
 #include "tree-header.hpp"
@@ -78,7 +82,46 @@ float DecisionTreeClassifier::determine_impurity_metric (arma::vec& Y) {
     } else if (split_metric == "entropy") {
         return DecisionTreeClassifier::compute_entropy(Y);
     } else {
+        //return DecisionTreeClassifier::compute_log_loss();
+    }
+}
 
+std::vector<int> DecisionTreeClassifier::determine_feature_split_metric (std::vector<int> feature_list) {
+    try {
+        auto string_ptr = std::get_if<std::string>(&max_features);
+        auto integer_ptr = std::get_if<int>(&max_features);
+        std::vector<int> selected_features;
+        int math_length;
+        int generated_number;
+
+        if (!string_ptr || !integer_ptr) {
+            return;
+        }
+
+        if (std::get<std::string>(max_features) == "sqrt") {
+            math_length = abs(sqrt(feature_list.size()));
+        } else if (std::get<std::string>(max_features) == "log2") {
+            math_length = abs(log2(feature_list.size()));
+        } else {
+            selected_features = feature_list;
+            return selected_features;
+        }
+
+        for (int index = 0; index < math_length; index++) {
+            generated_number = rand() % math_length;
+            auto math_mem_end = std::find(
+                selected_features.begin(),
+                selected_features.end(),
+                generated_number
+            );
+            if (math_mem_end != selected_features.end()) {
+                selected_features.push_back(generated_number);
+            }
+        }
+
+        return selected_features;
+    } catch (const std::bad_variant_access& error) {
+        std::cout << "Error: " << error.what() << std::endl;
     }
 }
 
