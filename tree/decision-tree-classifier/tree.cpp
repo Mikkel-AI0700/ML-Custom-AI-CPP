@@ -116,6 +116,8 @@ std::vector<int> DecisionTreeClassifier::determine_feature_split_metric (std::ve
             );
             if (math_mem_end != selected_features.end()) {
                 selected_features.push_back(generated_number);
+            } else {
+                continue;
             }
         }
 
@@ -123,6 +125,12 @@ std::vector<int> DecisionTreeClassifier::determine_feature_split_metric (std::ve
     } catch (const std::bad_variant_access& error) {
         std::cout << "Error: " << error.what() << std::endl;
     }
+}
+
+std::generator<YieldedInformation*> DecisionTreeClassifier::split_yield (
+    SplitYieldParameters& yield_parameters
+) {
+    
 }
 
 int main () {
