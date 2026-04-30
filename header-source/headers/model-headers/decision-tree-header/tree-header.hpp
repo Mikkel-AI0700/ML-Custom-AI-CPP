@@ -2,6 +2,7 @@
 #include <variant>
 #include <generator>
 #include <armadillo>
+#include <cstdlib>
 #include "base.hpp"
 #include "classifier_mixin.hpp"
 #include "complex_datatypes.hpp"
@@ -92,7 +93,7 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         DecisionTreeClassifier(
             std::string split_metric = "gini",
             int max_depth = 10,
-            SIDual max_features = nullptr,
+            SIDual max_feature,
             int max_leaf_nodes = 10,
             int min_samples_leaf = 50,
             int min_samples_split = 30,
@@ -125,7 +126,7 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         float compute_information_gain (arma::vec& Y, arma::mat& left_subset, arma::mat& right_subset);
         float determine_impurity_metric (arma::vec& Y);
         std::vector<int> determine_feature_split_metric (std::vector<int> feature_list);
-        YieldedInformation split_yield (SplitYieldParameters& yield_parameters);
+        std::generator<GeneratorVariables*> split_yield (GeneratorVariables& yield_parameters);
         std::variant<LeafNode, DecisionNode> create_node (CreateNodeParameters& node_parameters);
         std::variant<LeafNode, DecisionNode> build_decision_tree (
             arma::mat& X, 
