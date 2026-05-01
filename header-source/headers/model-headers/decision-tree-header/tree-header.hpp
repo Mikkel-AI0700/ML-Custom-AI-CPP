@@ -7,12 +7,6 @@
 #include "classifier_mixin.hpp"
 #include "complex_datatypes.hpp"
 
-struct SplitYieldParameters {
-    arma::mat&              X;
-    arma::vec&              Y;
-    std::vector<int>        num_feats;
-    std::vector<int>        cat_feats;
-};
 
 struct CreateNodeParameters {
     int                         split_index;
@@ -33,6 +27,13 @@ struct RecursiveTreeBuilder {
     arma::vec&                  best_left_y_subset;
     arma::mat&                  best_right_x_subset;
     arma::vec&                  best_right_y_subset;
+};
+
+struct SplitYieldParameters {
+    arma::mat&              X;
+    arma::vec&              Y;
+    std::vector<int>        num_feats;
+    std::vector<int>        cat_feats;
 };
 
 struct GeneratorVariables {
@@ -126,7 +127,10 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         float compute_information_gain (arma::vec& Y, arma::mat& left_subset, arma::mat& right_subset);
         float determine_impurity_metric (arma::vec& Y);
         std::vector<int> determine_feature_split_metric (std::vector<int> feature_list);
-        std::generator<GeneratorVariables*> split_yield (GeneratorVariables& yield_parameters);
+        std::generator<GeneratorVariables*> split_yield (
+            SplitYieldParameters* yield_parameters,
+            GeneratorVariables* generator_parameters
+        );
         std::variant<LeafNode, DecisionNode> create_node (CreateNodeParameters& node_parameters);
         std::variant<LeafNode, DecisionNode> build_decision_tree (
             arma::mat& X, 
