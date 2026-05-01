@@ -127,10 +127,19 @@ std::vector<int> DecisionTreeClassifier::determine_feature_split_metric (std::ve
     }
 }
 
-std::generator<YieldedInformation*> DecisionTreeClassifier::split_yield (
-    SplitYieldParameters& yield_parameters
+std::generator<GeneratorVariables*> DecisionTreeClassifier::split_yield (
+    SplitYieldParameters *yield_parameters,
+    GeneratorVariables *generator_variables
 ) {
-    
+    SplitYieldParameters *yield_parameter = yield_parameter;
+    GeneratorVariables *gen_var = generator_variables;
+
+    for (int index = 0; index < yield_parameter->num_feats.size(); index++) {
+
+    }
+    for (int index = 0; index < yield_parameter->cat_feats.size(); index++) {
+
+    }
 }
 
 int main () {
