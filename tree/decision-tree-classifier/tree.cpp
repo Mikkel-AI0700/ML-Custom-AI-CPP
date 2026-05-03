@@ -11,42 +11,26 @@
 #include "tree-header.hpp"
 #include "linalg-operations.hpp"
 
-// C++ STL library
-using std::cout;
-using std::string;
-using std::vector;
-using std::variant;
-using std::optional;
-using std::generator;
-using std::unique_ptr;
-using std::bad_variant_access;
-using std::runtime_error;
-
-// Armadillo library
-using arma::mat;
-using arma::vec;
-using arma::uvec;
-
-vec DecisionTreeClassifier::compute_class_probability (vec& Y) {
-    vector<int> labels;
-    vector<int> label_counts;
-    UniqueFunctionReturns unq_ret = unique(Y, true);
-
+arma::vec DecisionTreeClassifier::compute_class_probability (arma::vec& Y) {
+    std::vector<int> labels;
+    std::vector<int> label_counts;
+    UniqueFunctionReturns* unq_ret = unique(Y, True);
+    
     if (unique_classes.empty()) {
-        unique_classes = unq_ret.labels;
-        prob_vec = arma::zeros(unique_classes.size());
+        unique_classes = unq_ret->labels;
+        probability_vector = arma::zeros(unique_classes.size());
 
-        for (int i = 0; i < unq_ret.labels.size(); i++) {
-            classes_to_index.insert({unq_ret.labels[i], i});
+        for (int i = 0; i < unq_ret->labels.size(); i++) {
+            classes_to_index.insert({i, unq_ret->labels[i]});
         }
     } else {
-        prob_vec = arma::zeros(unique_classes.size());
+        probability_vector = arma::zeros(unq_ret->labels.size());
     }
 
-    for (int i = 0; i < unq_ret.labels.size(); i++) {
-        if (classes_to_index.contains(unq_ret.labels[i])) {
-            int index = classes_to_index.at(unq_ret.labels[i]);
-            prob_vec.at(index) = static_cast<float>(unq_ret.label_counts[i]) / static_cast<float>(Y.n_rows);
+    for (int i = 0; i < unq_ret->labels.size(); i++) {
+        if (classes_to_index.contains(unq_ret->labels[i])) {
+            int index = classes_to_index.at(unq_ret->labels[i]);
+            probability_vector.at(classes_to_index.at(index)) = unq_ret->label_counts[i] / Y.n_elem;
         }
     }
 
@@ -142,35 +126,19 @@ generator<GeneratorVariables&> DecisionTreeClassifier::split_yield (
     SplitYieldParameters &yield_params,
     GeneratorVariables &gen_var
 ) {
-    for (int index = 0; index < numerical_features.size(); index++) {
-        vec column_subview = yield_params.x_feat_mat.col(
-            numerical_features[index]
-        );
+    SplitYieldParameters *yield_parameter = yield_parameter;
+    GeneratorVariables *gen_var = generator_variables;
+    UniqueFunctionReturns *unq_ret = unique(yield_parameter->Y);
 
-        UniqueFunctionReturns subview_unq = unique(column_subview, false);
-        vec labels = arma::conv_to<vec>::from(subview_unq.labels);
-        vec midpoints = (
-            labels.subvec(0, labels.n_elem - 2) +
-            labels.subvec(1, labels.n_elem - 1)
-        ) / 2.0;
-
-        for (int inner_index = 0; inner_index < midpoints.n_elem; inner_index++) {
-            uvec left_idx = arma::find(
-                yield_params.x_feat_mat.col(numerical_features[index]) > midpoints[inner_index]
+    for (int index = 0; index < yield_parameter->num_feats.size(); index++) {
+        arma::vec midpoint_thresholds = (); // Unfinished code
+        for (int inner_index = 0; inner_index < midpoint_thresholds.n_elems; inner_index++) {
+            arma::uvec left_satisfying_indices = arma::find(
+                yield_parameters->X > midpoint_thresholds[inner_index] // Unfinished code
             );
-            uvec right_idx = arma::find(
-                yield_params.x_feat_mat.col(numerical_features[index]) <= midpoints[inner_index]
+            arma::uvec right_satisfying_indices = arma::find(
+                yield_parameters->X <= midpoint_thresholds[inner_index]
             );
-
-            gen_var.split_kind = "numeric";
-            gen_var.split_idx = numerical_features[index];
-            gen_var.num_thresh = midpoints[inner_index];
-            gen_var.left_x_mat = yield_params.x_feat_mat.rows(left_idx);
-            gen_var.left_y_vec = yield_params.y_target_vec.rows(left_idx);
-            gen_var.right_x_mat = yield_params.x_feat_mat.rows(right_idx);
-            gen_var.right_y_vec = yield_params.y_target_vec.rows(right_idx);
-
-            co_yield gen_var;
         }
     }
 
@@ -421,3 +389,5 @@ vec DecisionTreeClassifier::predict (mat& X) {
 int main () {
 
 }
+
+ 
