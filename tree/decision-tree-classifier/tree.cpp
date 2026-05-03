@@ -13,41 +13,23 @@
 arma::vec DecisionTreeClassifier::compute_class_probability (arma::vec& Y) {
     std::vector<int> labels;
     std::vector<int> label_counts;
-    for (int index = 0; index < Y.n_elem; index++) {
-        if (index == 0) {
-            continue;
-        }
-
-        if (Y[index] != Y[index - 1]) {
-            labels.push_back(Y[index]);
-        }
-    }
-
-    for (int i = 0; i < labels.size(); i++) {
-        int label_counter = 0;
-        for (int j = 0; j < Y.n_elem; j++) {
-            if (Y[j] == labels[i]) {
-                label_counter++;
-            }
-        }
-        label_counts.push_back(label_counter);
-    }
-
+    UniqueFunctionReturns* unq_ret = unique(Y, True);
+    
     if (unique_classes.empty()) {
-        unique_classes = labels;
+        unique_classes = unq_ret->labels;
         probability_vector = arma::zeros(unique_classes.size());
 
-        for (int i = 0; i < labels.size(); i++) {
-            classes_to_index.insert({i, labels[i]});
+        for (int i = 0; i < unq_ret->labels.size(); i++) {
+            classes_to_index.insert({i, unq_ret->labels[i]});
         }
     } else {
-        probability_vector = arma::zeros(labels.size());
+        probability_vector = arma::zeros(unq_ret->labels.size());
     }
 
-    for (int i = 0; i < labels.size(); i++) {
-        if (classes_to_index.contains(labels[i])) {
-            int index = classes_to_index.at(labels[i]);
-            probability_vector.at(classes_to_index.at(index)) = label_counts[i] / Y.n_elem;
+    for (int i = 0; i < unq_ret->labels.size(); i++) {
+        if (classes_to_index.contains(unq_ret->labels[i])) {
+            int index = classes_to_index.at(unq_ret->labels[i]);
+            probability_vector.at(classes_to_index.at(index)) = unq_ret->label_counts[i] / Y.n_elem;
         }
     }
 
@@ -133,9 +115,18 @@ std::generator<GeneratorVariables*> DecisionTreeClassifier::split_yield (
 ) {
     SplitYieldParameters *yield_parameter = yield_parameter;
     GeneratorVariables *gen_var = generator_variables;
+    UniqueFunctionReturns *unq_ret = unique(yield_parameter->Y);
 
     for (int index = 0; index < yield_parameter->num_feats.size(); index++) {
-
+        arma::vec midpoint_thresholds = (); // Unfinished code
+        for (int inner_index = 0; inner_index < midpoint_thresholds.n_elems; inner_index++) {
+            arma::uvec left_satisfying_indices = arma::find(
+                yield_parameters->X > midpoint_thresholds[inner_index] // Unfinished code
+            );
+            arma::uvec right_satisfying_indices = arma::find(
+                yield_parameters->X <= midpoint_thresholds[inner_index]
+            );
+        }
     }
     for (int index = 0; index < yield_parameter->cat_feats.size(); index++) {
 
