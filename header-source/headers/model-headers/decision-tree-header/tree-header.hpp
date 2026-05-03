@@ -7,7 +7,6 @@
 #include "classifier_mixin.hpp"
 #include "complex_datatypes.hpp"
 
-
 struct CreateNodeParameters {
     int                         split_index;
     std::variant<int, float>    numerical_feats;
