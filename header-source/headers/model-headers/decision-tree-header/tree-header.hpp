@@ -11,16 +11,25 @@
 #include "classifier_mixin.hpp"
 #include "complex_datatypes.hpp"
 
-struct BestCandidateSplit {
-    arma::mat                                  left_x_mat;
-    arma::mat                                  right_x_mat;
-    arma::vec                                  left_y_vec;
-    arma::vec                                  right_y_vec;
-    arma::vec                                  computed_probs;
-    std::optional<float>                       num_cond;
-    float                                      best_gain = 0.0f;
-    int                                        best_idx;
-    std::optional<float>                       cat_cond;
+struct CreateNodeParameters {
+    int                         split_index;
+    std::variant<int, float>    numerical_feats;
+    std::variant<int, float>    categorical_feats;
+    float                       information_gain;
+    std::vector<float>          computed_class_probabilities;
+    bool                        create_decision_node;
+    bool                        create_leaf_node;
+};
+
+struct RecursiveTreeBuilder {
+    float                       best_information_gain;
+    int                         best_index;
+    std::variant<int, float>    best_num_split_condition;
+    int                         best_cat_split_condition;
+    arma::mat&                  best_left_x_subset;
+    arma::vec&                  best_left_y_subset;
+    arma::mat&                  best_right_x_subset;
+    arma::vec&                  best_right_y_subset;
 };
 
 struct SplitYieldParameters {
@@ -122,19 +131,5 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         std::generator<GeneratorVariables&> split_yield (
             SplitYieldParameters& yield_parameters,
             GeneratorVariables& generator_parameters
-        );
-        std::unique_ptr<Node> create_node (
-            BestCandidateSplit& rec_tree_build,
-            bool create_decision_node,
-            bool create_leaf_node
-        );
-        std::unique_ptr<Node> build_decision_tree (
-            arma::mat& X,
-            arma::vec& Y,
-            int recursive_max_depth
-        );
-        int traverse_tree_prediction (
-            arma::mat element,
-            const std::unique_ptr<Node>& node
         );
 };
