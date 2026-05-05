@@ -2,10 +2,10 @@
 #include <armadillo>
 #include "linalg-operations.hpp"
 
-UniqueFunctionReturns* unique (arma::vec& Y, bool return_counts) {
+UniqueFunctionReturns unique (arma::mat& Y, bool return_counts) {
     std::vector<int> discovered_labels;
     std::vector<int> discovered_label_counts;
-    UniqueFunctionReturns* u_func_ret;
+    UniqueFunctionReturns u_func_ret;
 
     for (int index = 0; index < Y.n_elem; index++) {
         if (index == 0) {
@@ -16,7 +16,7 @@ UniqueFunctionReturns* unique (arma::vec& Y, bool return_counts) {
             discovered_labels.push_back(Y[index]);
         }
     }
-    u_func_ret->labels = discovered_labels;
+    u_func_ret.labels = discovered_labels;
 
     if (return_counts) {
         for (int outer_index = 0; outer_index < discovered_labels.size(); outer_index++) {
@@ -28,6 +28,6 @@ UniqueFunctionReturns* unique (arma::vec& Y, bool return_counts) {
             }
             discovered_label_counts.push_back(label_counter);
         }
-        u_func_ret->label_counts = discovered_label_counts;
+        u_func_ret.label_counts = discovered_label_counts;
     }
 }
