@@ -152,9 +152,16 @@ generator<GeneratorVariables&> DecisionTreeClassifier::split_yield (
             gen_var->split_type = "numeric";
             gen_var->split_index = yield_parameter->num_feats[index];
             gen_var->best_temporary_numeric_threshold = midpoints[inner_index];
-            
+            gen_var->left_x_subset = yield_parameter->X.rows(left_satisfying_indices);
+            gen_var->left_y_subset = yield_parameter->Y.rows(left_satisfying_indices);
+            gen_var->right_x_subset = yield_parameter->X.rows(right_satisfying_indices);
+            gen_var->right_y_subset = yield_parameter->Y.rows(right_satisfying_indices);            
         }
+
+        co_yield gen_var;
     }
+
+    for (int index = 0; index < yield_parameter->cat_feats.size(); index++) {
 
     for (int index = 0; index < categorical_features.size(); index++) {
         vec column_subview = yield_params.x_feat_mat.col(
