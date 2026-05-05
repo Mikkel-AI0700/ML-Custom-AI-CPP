@@ -38,14 +38,14 @@ struct SplitYieldParameters {
 };
 
 struct GeneratorVariables {
-    arma::mat                                  left_x_mat;
-    arma::mat                                  right_x_mat;
-    arma::vec                                  left_y_vec;
-    arma::vec                                  right_y_vec;
-    std::string                                split_kind;
-    std::optional<float>                       num_thresh;
-    std::optional<float>                       cat_thresh;
-    int                                        split_idx;
+    std::string                 split_type;
+    int                         split_index;
+    std::variant<int, double>   best_temporary_numeric_threshold;
+    int                         best_temporary_categorical_threshold;
+    arma::mat&                  left_x_subset;
+    arma::vec&                  left_y_subset;
+    arma::mat&                  right_x_subset;
+    arma::vec&                  right_y_subset;
 };
 
 struct Node {
