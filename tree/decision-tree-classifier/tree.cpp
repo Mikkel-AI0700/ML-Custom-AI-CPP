@@ -9,11 +9,12 @@
 #include <armadillo>
 #include "loader.hpp"
 #include "tree-header.hpp"
+#include "linalg-operations.hpp"
 
 arma::vec DecisionTreeClassifier::compute_class_probability (arma::vec& Y) {
     std::vector<int> labels;
     std::vector<int> label_counts;
-    UniqueFunctionReturns* unq_ret = unique(Y, True);
+    UniqueFunctionReturns* unq_ret = unique(Y, true);
     
     if (unique_classes.empty()) {
         unique_classes = unq_ret->labels;
@@ -115,17 +116,28 @@ std::generator<GeneratorVariables*> DecisionTreeClassifier::split_yield (
 ) {
     SplitYieldParameters *yield_parameter = yield_parameter;
     GeneratorVariables *gen_var = generator_variables;
-    UniqueFunctionReturns *unq_ret = unique(yield_parameter->Y);
-
+    
     for (int index = 0; index < yield_parameter->num_feats.size(); index++) {
-        arma::vec midpoint_thresholds = (); // Unfinished code
-        for (int inner_index = 0; inner_index < midpoint_thresholds.n_elems; inner_index++) {
+        arma::vec column_subview = yield_parameter->X.col(yield_parameter->num_feats.size());
+
+        UniqueFunctionReturns subview_unq = unique(column_subview, false);
+        arma::vec labels = arma::conv_to<arma::vec>::from(subview_unq.labels);
+        arma::vec midpoints = (
+            labels.subvec(0, labels.n_elem - 2) + labels.subvec(1, labels.n_elem - 1)
+        ) / 2.0;
+
+        for (int inner_index = 0; inner_index < midpoints.n_elem; inner_index++) {
             arma::uvec left_satisfying_indices = arma::find(
-                yield_parameters->X > midpoint_thresholds[inner_index] // Unfinished code
+                yield_parameters->X > midpoints[inner_index] // Unfinished code
             );
             arma::uvec right_satisfying_indices = arma::find(
-                yield_parameters->X <= midpoint_thresholds[inner_index]
+                yield_parameters->X <= midpoints[inner_index]
             );
+
+            gen_var->split_type = "numeric";
+            gen_var->split_index = yield_parameter->num_feats[index];
+            gen_var->best_temporary_numeric_threshold = midpoints.at(inner_index);
+            gen_var->best_temporary_categorical_threshold = nullptr;
         }
     }
     for (int index = 0; index < yield_parameter->cat_feats.size(); index++) {
