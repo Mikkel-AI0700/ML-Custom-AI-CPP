@@ -38,7 +38,7 @@ struct SplitYieldParameters {
 struct GeneratorVariables {
     std::string                 split_type;
     int                         split_index;
-    std::variant<int, float>    best_temporary_numeric_threshold;
+    std::variant<int, double>   best_temporary_numeric_threshold;
     int                         best_temporary_categorical_threshold;
     arma::mat&                  left_x_subset;
     arma::vec&                  left_y_subset;
