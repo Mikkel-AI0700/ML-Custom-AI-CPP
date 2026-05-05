@@ -14,23 +14,23 @@
 arma::vec DecisionTreeClassifier::compute_class_probability (arma::vec& Y) {
     std::vector<int> labels;
     std::vector<int> label_counts;
-    UniqueFunctionReturns* unq_ret = unique(Y, true);
+    UniqueFunctionReturns unq_ret = unique(Y, true);
     
     if (unique_classes.empty()) {
-        unique_classes = unq_ret->labels;
+        unique_classes = unq_ret.labels;
         probability_vector = arma::zeros(unique_classes.size());
 
-        for (int i = 0; i < unq_ret->labels.size(); i++) {
-            classes_to_index.insert({i, unq_ret->labels[i]});
+        for (int i = 0; i < unq_ret.labels.size(); i++) {
+            classes_to_index.insert({i, unq_ret.labels[i]});
         }
     } else {
-        probability_vector = arma::zeros(unq_ret->labels.size());
+        probability_vector = arma::zeros(unq_ret.labels.size());
     }
 
-    for (int i = 0; i < unq_ret->labels.size(); i++) {
-        if (classes_to_index.contains(unq_ret->labels[i])) {
-            int index = classes_to_index.at(unq_ret->labels[i]);
-            probability_vector.at(classes_to_index.at(index)) = unq_ret->label_counts[i] / Y.n_elem;
+    for (int i = 0; i < unq_ret.labels.size(); i++) {
+        if (classes_to_index.contains(unq_ret.labels[i])) {
+            int index = classes_to_index.at(unq_ret.labels[i]);
+            probability_vector.at(classes_to_index.at(index)) = unq_ret.label_counts[i] / Y.n_elem;
         }
     }
 
@@ -118,17 +118,20 @@ std::generator<GeneratorVariables*> DecisionTreeClassifier::split_yield (
     GeneratorVariables *gen_var = generator_variables;
     
     for (int index = 0; index < yield_parameter->num_feats.size(); index++) {
-        arma::vec column_subview = yield_parameter->X.col(yield_parameter->num_feats.size());
+        arma::vec column_subview = yield_parameter->X.col(
+            yield_parameter->num_feats.size()
+        );
 
         UniqueFunctionReturns subview_unq = unique(column_subview, false);
         arma::vec labels = arma::conv_to<arma::vec>::from(subview_unq.labels);
         arma::vec midpoints = (
-            labels.subvec(0, labels.n_elem - 2) + labels.subvec(1, labels.n_elem - 1)
+            labels.subvec(0, labels.n_elem - 2) + 
+            labels.subvec(1, labels.n_elem - 1)
         ) / 2.0;
 
         for (int inner_index = 0; inner_index < midpoints.n_elem; inner_index++) {
             arma::uvec left_satisfying_indices = arma::find(
-                yield_parameters->X > midpoints[inner_index] // Unfinished code
+                yield_parameters->X > midpoints[inner_index]
             );
             arma::uvec right_satisfying_indices = arma::find(
                 yield_parameters->X <= midpoints[inner_index]
@@ -136,8 +139,8 @@ std::generator<GeneratorVariables*> DecisionTreeClassifier::split_yield (
 
             gen_var->split_type = "numeric";
             gen_var->split_index = yield_parameter->num_feats[index];
-            gen_var->best_temporary_numeric_threshold = midpoints.at(inner_index);
-            gen_var->best_temporary_categorical_threshold = nullptr;
+            gen_var->best_temporary_numeric_threshold = midpoints[inner_index];
+            
         }
     }
     for (int index = 0; index < yield_parameter->cat_feats.size(); index++) {
