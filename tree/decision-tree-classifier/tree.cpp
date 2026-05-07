@@ -150,7 +150,19 @@ std::generator<GeneratorVariables*> DecisionTreeClassifier::split_yield (
     }
 
     for (int index = 0; index < yield_parameter->cat_feats.size(); index++) {
-
+        arma::vec column_subview = yield_parameter->X.col(
+            yield_parameter->cat_feats[index]
+        );
+        UniqueFunctionReturns subview_unq = unique(column_subview, false);
+        
+        for (int inner_index = 0; inner_index < subview_unq.labels.size(); inner_index++) {
+            arma::uvec left_satisfying_indices = arma::find(
+                yield_parameter->X == subview_unq.labels[inner_index]
+            );
+            arma::uvec right_satisfying_indices = arma::find(
+                yield_parameter->X != subview_unq.labels[inner_index]
+            );
+        }
     }
 }
 
