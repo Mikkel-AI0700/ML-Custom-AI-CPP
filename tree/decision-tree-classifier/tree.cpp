@@ -162,30 +162,18 @@ generator<GeneratorVariables&> DecisionTreeClassifier::split_yield (
     }
 
     for (int index = 0; index < yield_parameter->cat_feats.size(); index++) {
-
-    for (int index = 0; index < categorical_features.size(); index++) {
-        vec column_subview = yield_params.x_feat_mat.col(
-            categorical_features[index]
+        arma::vec column_subview = yield_parameter->X.col(
+            yield_parameter->cat_feats[index]
         );
         UniqueFunctionReturns subview_unq = unique(column_subview, false);
-
+        
         for (int inner_index = 0; inner_index < subview_unq.labels.size(); inner_index++) {
-            uvec left_idx = arma::find(
-                yield_params.x_feat_mat.col(categorical_features[index]) == subview_unq.labels[inner_index]
+            arma::uvec left_satisfying_indices = arma::find(
+                yield_parameter->X == subview_unq.labels[inner_index]
             );
-            uvec right_idx = arma::find(
-                yield_params.x_feat_mat.col(categorical_features[index]) != subview_unq.labels[inner_index]
+            arma::uvec right_satisfying_indices = arma::find(
+                yield_parameter->X != subview_unq.labels[inner_index]
             );
-
-            gen_var.split_kind = "categorical";
-            gen_var.split_idx = categorical_features[index];
-            gen_var.cat_thresh = subview_unq.labels[inner_index];
-            gen_var.left_x_mat = yield_params.x_feat_mat.rows(left_idx);
-            gen_var.left_y_vec = yield_params.y_target_vec.rows(left_idx);
-            gen_var.right_x_mat = yield_params.x_feat_mat.rows(right_idx);
-            gen_var.right_y_vec = yield_params.y_target_vec.rows(right_idx);
-
-            co_yield gen_var;
         }
     }
 }
