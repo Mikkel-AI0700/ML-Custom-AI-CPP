@@ -5,31 +5,26 @@ python_generator_path="$(pwd)/python-utilities/generator-files/generator.py"
 python_model_metric_checker="$(pwd)/python-utilities/performance-metric-checkers/model_metric_checker.py"
 python_tld="$(pwd)/python-utilities"
 
-# Machine learning algorithms file paths
-linreg_source_path="$(pwd)/linear-regression/source-codes/lin-reg-main.cpp"
-logreg_source_path="$(pwd)/logistic-regression/source-codes/log-reg-main.cpp"
-
-# Directory to place the compiled ML algorithms
-compiled_algorithms_path="$(pwd)/compiled-algorithms"
+# CMake build directory
+cmake_build_directory="$(pwd)/build"
 
 function generate_datasets () {
-    local dataset_type="$1"
-    local filename="$2"
-    local key_value_change="$3"
-    local skip_data_generation=$4 
+    local dataset_type_name="$1"
+    local generator_key_value_change="$2"
+    local SKIP_DATA_GENERATION="$3"
 
-    if [[ ! -z "${PYTHONPATH}" && ! -z "${VIRTUAL_ENV}" ]]; then
-        echo -n "[+] Python TLD set: $(echo ${PYTHONPATH})\n [+] Venv set: $(echo ${VIRTUAL_ENV})"
+    if [[ -n "${PYTHONPATH:-}" && -n "${VIRTUAL_ENV:-}" ]]; then
+        printf "[+] Python TLD set: %s\n[+] Venv set: %s\n" "${PYTHONPATH}" "${VIRTUAL_ENV}"
     else
         export PYTHONPATH=${python_tld} && echo "[*] TLD set: ${PYTHONPATH}"
         source python-utilities/generator-venv/bin/activate && echo "[*] VENV set: ${VIRTUAL_ENV}"
     fi
 
-    if [[ ! ${skip_data_generation} -eq 1 ]]; then
+    if [[ "${SKIP_DATA_GENERATION}" != "true" ]]; then
         echo "[+] Running the generator: ${python_generator_path}"
         python3 "${python_generator_path}" \
-            --dataset-type "${dataset_type}" \
-            --key-value-change "${key_value_change}"
+            --dataset-type "${dataset_type_name}" \
+            --key-value-change "${generator_key_value_change}"
     else
         echo "[*] Training and testing dataset generation skipped. You may now proceed to compilation"
         return
@@ -37,166 +32,185 @@ function generate_datasets () {
 }
 
 function evaluate_machine_learning_predictions () {
-    local true_y_path="$1"
-    local predictions_path="$2"
-    local metric_type="$3"
-    local spec_metric="$4"
-    local specs_metrics="$5"
-    local all_metrics="$6"
+    local true_data_path="$1"
+    local model_predictions_path="$2"
+    local metric_type_name="$3"
+    local specific_metric_name="$4"
+    local RUN_SPECIFIC_METRICS="$5"
+    local RUN_ALL_METRICS="$6"
 
-    if [[ -z "${PYTHONPATH}" && -z "${VIRTUAL_ENV}" ]]; then
+    if [[ -z "${PYTHONPATH:-}" && -z "${VIRTUAL_ENV:-}" ]]; then
         echo "[-] Error: Cannot run script when both PYTHONPATH and VIRTUAL_ENV is not set"
         exit 1
     fi
 
-    if [[ -z "${true_y_path}" || -z "${predictions_path}" ]]; then
+    if [[ -z "${true_data_path}" || -z "${model_predictions_path}" ]]; then
         echo "[-] Error: Both ground truths and predictions path cannot be empty"
         exit 1
     fi
 
-    if [[ "${metric_type}" != "regression" || "${metric_type}" != "classification" || "${metric_type}" != "clustering" ]]; then
-        echo "[-] Error: User passed metric type is non-existent"
+    case "${metric_type_name}" in
+        regression|classification|clustering) ;;
+        *)
+            echo "[-] Error: User passed metric type is non-existent"
+            exit 1
+            ;;
+    esac
+
+    local true_data_abs_path="${true_data_path}"
+    local predictions_abs_path="${model_predictions_path}"
+    if [[ "${true_data_abs_path}" != /* ]]; then
+        true_data_abs_path="$(pwd)/${true_data_abs_path}"
+    fi
+    if [[ "${predictions_abs_path}" != /* ]]; then
+        predictions_abs_path="$(pwd)/${predictions_abs_path}"
+    fi
+
+    if [[ "${RUN_SPECIFIC_METRICS}" == "true" ]]; then
+        if [[ -z "${specific_metric_name}" ]]; then
+            echo "[-] Error: Must provide a specific metric name with -c when using -S"
+            exit 1
+        fi
+
+        python3 "${python_model_metric_checker}" \
+            --metric-type "${metric_type_name}" \
+            --run-spec-metric \
+            --spec-metric "${specific_metric_name}" \
+            --train-data "${true_data_abs_path}" \
+            --predictions "${predictions_abs_path}"
+        return
+    fi
+
+    if [[ "${RUN_ALL_METRICS}" == "true" ]]; then
+        python3 "${python_model_metric_checker}" \
+            --metric-type "${metric_type_name}" \
+            --run-all-metrics \
+            --train-data "${true_data_abs_path}" \
+            --predictions "${predictions_abs_path}"
+        return
+    fi
+
+    echo "[-] Error: Must select either -S (specific metric) or -A (all metrics)"
+    exit 1
+}
+
+function build_machine_learning_models () {
+    mkdir -p "${cmake_build_directory}"
+
+    echo "[+] Configuring CMake build directory: ${cmake_build_directory}"
+    if ! cmake -S "$(pwd)" -B "${cmake_build_directory}" -DCMAKE_BUILD_TYPE=Release; then
+        echo "[-] Error: CMake configure failed"
         exit 1
     fi
 
-    # Condition to check if user will run specific metrics
-    if [[ ${specs_metrics} -eq 1 && ! -z "${spec_metric}" ]]; then
-        python3 "${python_model_metric_checker}" \
-            --metric-type "${metric_type}" \
-            --run-spec-metrics \
-            --spec-metric "${spec_metric}" \
-            --true-data "$(pwd)/${true_y_path}" \
-            --predictions "$(pwd)/${predictions_path}"
-    else
-        echo "[-] Error: Must provide a specific metric relative to the chosen metric"
+    echo "[+] Building CMake project"
+    if ! cmake --build "${cmake_build_directory}" --config Release; then
+        echo "[-] Error: CMake build failed"
+        exit 1
     fi
-
-    # Condition to check if user will run all metrics according to chosen learning type
-    if [[ ${all_metrics} -eq 1 ]]; then
-        python3 "${python_model_metric_checker}" \
-            --metric-type "${metric_type}" \
-            --run-all-metrics \
-            --true-data "$$(pwd)/{true_y_path}" \
-            --predictions-path "$(pwd)/${predictions_path}"
-    fi
-}
-
-function activate_machine_learning_models () {
-    local algorithm_type="$1"
-    declare -A ml_algorithms=(
-        ["linreg"]="${linreg_source_path}"
-        ["logreg"]="${logreg_source_path}"
-    )
-
-    for ml_key in "${!ml_algorithms[@]}"; do
-        ml_value="${ml_algorithms[${ml_key}]}"
-
-        if [[ -e "${compiled_algorithms_path}/compiled-${algorithm_type}" ]]; then
-            echo "[-] A compiled version of ${algorithm_type} exists! Removing..."
-            rm -fr "${compiled_algorithms_path}/compiled-${algorithm_type}"
-        fi
-
-        if [[ "${ml_key}" == "${algorithm_type}" ]]; then
-            echo "Compiling: ${compiled_algorithms_path}/compiled-${algorithm_type}"
-            clang++ "${ml_value}" -o "${compiled_algorithms_path}/compiled-${algorithm_type}" \
-                header-source/header-source-files/base-source-files/base.cpp \
-                header-source/header-source-files/base-source-files/classifier_mixin.cpp \
-                header-source/header-source-files/cpp-utilities-source-files/loader.cpp \
-                --std=c++23 \
-                -Iheader-source/headers/ \
-                -larmadillo \
-                -lblas \
-                -llapack \
-                -fcaret-diagnostics \
-                -fshow-column \
-                -O3
-        fi
-
-        if [[ $? -eq 0 ]]; then
-            echo "[+] Successfully compiled: ${compiled_algorithms_path}/compiled-${algorithm_type}"
-            exit 0
-        else
-            echo "[-] Error: Something went wrong compiling: ${compiled_algorithms_path}/compiled-${algorithm_type}"
-            exit 1
-        fi
-    done
 }
 
 function display_help () {
-    echo -e "[-G <Activate GENERATE_DATASETS FLAG>] \n[-C <Activate the METRIC_CHECK flag>] \n[-O <Activate the COMPILE_ML flag>]"
-
-    # For the GENERATE_COMPILE Flag
-    echo -e "[-S <Activates the SPEC_METRIC flag, to be used with METRIC_CHECK>] \n[-A <Activates the ALL_METRICS flag, to be used with METRIC_CHECK>]"
-    echo -e "[-a <Provide the C++ ML algorithm to compile>] \n[-d <Provide the type of dataset to make [regression, classification, clustering]>]"
-    echo -e "[-k <Provide the key-value-change to change in the generator configurations>] \n[-s <Skips the dataset generation>]"
-    
-    # For the METRIC_CHECK Flag
-    echo -e "[-m <Provide the metric type for the learning type>]"
-    echo -e "[-S <Activate specific metrics>] \n[-A <Activate all the metrics>] \n[-c <Provide the specific metric>]"
-    echo -e "[-T <Provide the ground truths path>] \n[-P <Provide the model predictions path>]"
+    echo "Usage:"
+    echo "  ./run-script.sh -G -d <dataset_type> [-k <key_value_change>] [-s]"
+    echo "  ./run-script.sh -C -m <metric_type> -T <true_data_path> -P <predictions_path> (-S -c <metric_name> | -A)"
+    echo "  ./run-script.sh -O"
+    echo
+    echo "Modes:"
+    echo "  -G  Generate datasets (generator.py)"
+    echo "  -C  Evaluate ML predictions (model_metric_checker.py)"
+    echo "  -O  Build ML models via CMake (build/)"
+    echo "  -h  Display help"
+    echo
+    echo "Dataset generation options (-G):"
+    echo "  -d  Dataset type: regression | classification | clustering"
+    echo "  -k  Key/value override for generator config (passed to --key-value-change)"
+    echo "  -s  Skip dataset generation"
+    echo
+    echo "Prediction evaluation options (-C):"
+    echo "  -m  Metric type: regression | classification | clustering"
+    echo "  -T  Ground truth CSV path (train-data)"
+    echo "  -P  Predictions CSV path"
+    echo "  -S  Run a specific metric (requires -c)"
+    echo "  -c  Specific metric name (eg: mse, accuracy)"
+    echo "  -A  Run all metrics"
 }
 
 function main () {
-    # Flags to check to either generate/compile or to check metrics
-    local GENERATE_DATASETS=0
-    local METRIC_CHECK=0
-    local COMPILE_ML=0
+    # Mode flags
+    local GENERATE_DATASETS=false
+    local EVALUATE_MACHINE_LEARNING_PREDICTIONS=false
+    local BUILD_MACHINE_LEARNING_MODELS=false
 
-    # Generate/Compile options
-    local algorithm_type=""
-    local dataset_type=""
-    local filename=""
-    local key_value_change=""
-    local skip_dataset_generation=0
+    # Dataset generation args
+    local dataset_type_name=""
+    local generator_key_value_change=""
+    local SKIP_DATA_GENERATION=false
 
-    # Metric checkers options
-    local metric_type=""
-    local true_y_path=""
-    local predictions_path=""
-    local speci_metric=""
-    local SPEC_METRIC=0
-    local ALL_METRICS=0
+    # Prediction evaluation args
+    local metric_type_name=""
+    local true_data_path=""
+    local model_predictions_path=""
+    local specific_metric_name=""
+    local RUN_SPECIFIC_METRICS=false
+    local RUN_ALL_METRICS=false
 
-    local options="a:d:f:t:p:mSATPcksGCOh"
+    local options="GCOhd:k:sm:T:P:c:SA"
 
     while getopts "${options}" option_flag; do
         case "${option_flag}" in
-            a) algorithm_type="${OPTARG}" ;;
-            d) dataset_type="${OPTARG}" ;;
-            k) key_value_change="${OPTARG}" ;;
-            s) skip_dataset_generation=1 ;;
-            m) metric_type="${OPTARG}" ;;
-            S) SPEC_METRIC=1 ;;
-            A) ALL_METRICS=1 ;;
-            T) true_y_path="${OPTARG}" ;;
-            P) predictions_path="${OPTARG}" ;;
-            c) speci_metric="${OPTARG}" ;;
-            O) COMPILE_ML=1 ;;
-            G) GENERATE_DATASETS=1 ;;
-            C) METRIC_CHECK=1 ;;
-            h) display_help ;;
-            *) display_help ;;
+            d) dataset_type_name="${OPTARG}" ;;
+            k) generator_key_value_change="${OPTARG}" ;;
+            s) SKIP_DATA_GENERATION=true ;;
+
+            m) metric_type_name="${OPTARG}" ;;
+            T) true_data_path="${OPTARG}" ;;
+            P) model_predictions_path="${OPTARG}" ;;
+            S) RUN_SPECIFIC_METRICS=true ;;
+            A) RUN_ALL_METRICS=true ;;
+            c) specific_metric_name="${OPTARG}" ;;
+
+            O) BUILD_MACHINE_LEARNING_MODELS=true ;;
+            G) GENERATE_DATASETS=true ;;
+            C) EVALUATE_MACHINE_LEARNING_PREDICTIONS=true ;;
+            h) display_help; exit 0 ;;
+            *) display_help; exit 1 ;;
         esac
     done
 
-    if [[ ${GENERATE_DATASETS} -eq 1 ]]; then
+    local selected_modes=0
+    $GENERATE_DATASETS && ((selected_modes++))
+    $EVALUATE_MACHINE_LEARNING_PREDICTIONS && ((selected_modes++))
+    $BUILD_MACHINE_LEARNING_MODELS && ((selected_modes++))
+
+    if [[ ${selected_modes} -ne 1 ]]; then
+        echo "[-] Error: Must select exactly one mode (-G, -C, or -O)"
+        display_help
+        exit 1
+    fi
+
+    if $GENERATE_DATASETS; then
         echo "[+] Passing on script arguments to generator.py"
-        generate_datasets "${dataset_type}" "${filename}" "${key_value_change}" ${skip_dataset_generation}
-    elif [[ ${COMPILE_ML} -eq 1 ]]; then
-        echo "[+] Passing on scripts to compile the machine learning algorithm"
-        activate_machine_learning_models "${algorithm_type}"
-    elif [[ ${METRIC_CHECK} -eq 1 ]]; then
+        generate_datasets "${dataset_type_name}" "${generator_key_value_change}" "${SKIP_DATA_GENERATION}"
+        exit 0
+    fi
+
+    if $BUILD_MACHINE_LEARNING_MODELS; then
+        echo "[+] Building machine learning models via CMake"
+        build_machine_learning_models
+        exit 0
+    fi
+
+    if $EVALUATE_MACHINE_LEARNING_PREDICTIONS; then
         echo "[+] Passing on the script arguments to model_metric_checker.py"
         evaluate_machine_learning_predictions \
-            "${true_y_path}" \
-            "${predictions_path}" \
-            "${metric_type}" \
-            "${speci_metric}" \
-            ${SPEC_METRIC} \
-            ${ALL_METRICS}
-    else
-        echo "[-] Error: Either generate/compile or metric_check flag must be set"
-        exit 1
+            "${true_data_path}" \
+            "${model_predictions_path}" \
+            "${metric_type_name}" \
+            "${specific_metric_name}" \
+            "${RUN_SPECIFIC_METRICS}" \
+            "${RUN_ALL_METRICS}"
+        exit 0
     fi
 }
 
