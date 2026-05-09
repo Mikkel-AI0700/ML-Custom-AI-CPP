@@ -10,7 +10,7 @@ cmake_build_directory="$(pwd)/build"
 
 function generate_datasets () {
     local dataset_type_name="$1"
-    local generator_config_change="$2"
+    local generator_key_value_change="$2"
     local SKIP_DATA_GENERATION="$3"
 
     if [[ -n "${PYTHONPATH:-}" && -n "${VIRTUAL_ENV:-}" ]]; then
@@ -24,7 +24,7 @@ function generate_datasets () {
         echo "[+] Running the generator: ${python_generator_path}"
         python3 "${python_generator_path}" \
             --dataset-type "${dataset_type_name}" \
-            --key-value-change "${generator_config_change}"
+            --key-value-change "${generator_key_value_change}"
     else
         echo "[*] Training and testing dataset generation skipped. You may now proceed to compilation"
         return
@@ -124,7 +124,7 @@ function display_help () {
     echo
     echo "Dataset generation options (-G):"
     echo "  -d  Dataset type: regression | classification | clustering"
-    echo "  -k  Config override for generator (passed to --key-value-change)"
+    echo "  -k  Key/value override for generator config (passed to --key-value-change)"
     echo "  -s  Skip dataset generation"
     echo
     echo "Prediction evaluation options (-C):"
@@ -144,7 +144,7 @@ function main () {
 
     # Dataset generation args
     local dataset_type_name=""
-    local generator_config_change=""
+    local generator_key_value_change=""
     local SKIP_DATA_GENERATION=false
 
     # Prediction evaluation args
@@ -160,7 +160,7 @@ function main () {
     while getopts "${options}" option_flag; do
         case "${option_flag}" in
             d) dataset_type_name="${OPTARG}" ;;
-            k) generator_config_change="${OPTARG}" ;;
+            k) generator_key_value_change="${OPTARG}" ;;
             s) SKIP_DATA_GENERATION=true ;;
 
             m) metric_type_name="${OPTARG}" ;;
@@ -191,7 +191,7 @@ function main () {
 
     if $GENERATE_DATASETS; then
         echo "[+] Passing on script arguments to generator.py"
-        generate_datasets "${dataset_type_name}" "${generator_config_change}" "${SKIP_DATA_GENERATION}"
+        generate_datasets "${dataset_type_name}" "${generator_key_value_change}" "${SKIP_DATA_GENERATION}"
         exit 0
     fi
 
