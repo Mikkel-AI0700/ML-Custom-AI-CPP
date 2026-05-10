@@ -12,19 +12,19 @@
 #include "complex_datatypes.hpp"
 
 struct CreateNodeParameters {
-    int                         split_index;
     std::variant<int, float>    numerical_feats;
     std::variant<int, float>    categorical_feats;
-    float                       information_gain;
     std::vector<float>          computed_class_probabilities;
+    float                       information_gain;
+    int                         split_index;
     bool                        create_decision_node;
     bool                        create_leaf_node;
 };
 
 struct RecursiveTreeBuilder {
+    std::variant<int, float>    best_num_split_condition;
     float                       best_information_gain;
     int                         best_index;
-    std::variant<int, float>    best_num_split_condition;
     int                         best_cat_split_condition;
     arma::mat&                  best_left_x_subset;
     arma::vec&                  best_left_y_subset;
