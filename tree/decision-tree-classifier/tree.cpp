@@ -13,42 +13,42 @@
 
 arma::vec DecisionTreeClassifier::compute_class_probability (arma::vec& Y) {
     std::vector<int> labels;
-    std::vector<int> label_counts;
+    std::vector<int> lbl_counts;
     UniqueFunctionReturns unq_ret = unique(Y, true);
     
     if (unique_classes.empty()) {
         unique_classes = unq_ret.labels;
-        probability_vector = arma::zeros(unique_classes.size());
+        prob_vec = arma::zeros(unique_classes.size());
 
         for (int i = 0; i < unq_ret.labels.size(); i++) {
             classes_to_index.insert({i, unq_ret.labels[i]});
         }
     } else {
-        probability_vector = arma::zeros(unq_ret.labels.size());
+        prob_vec = arma::zeros(unq_ret.labels.size());
     }
 
     for (int i = 0; i < unq_ret.labels.size(); i++) {
         if (classes_to_index.contains(unq_ret.labels[i])) {
             int index = classes_to_index.at(unq_ret.labels[i]);
-            probability_vector.at(classes_to_index.at(index)) = unq_ret.label_counts[i] / Y.n_elem;
+            prob_vec.at(classes_to_index.at(index)) = unq_ret.label_counts[i] / Y.n_elem;
         }
     }
 
-    return probability_vector;
+    return prob_vec;
 }
 
 float DecisionTreeClassifier::compute_impurity (arma::vec& Y) {
-    arma::vec probability_vector = DecisionTreeClassifier::compute_class_probability(Y);
-    float computed_impurity = 1 - arma::sum(arma::square(probability_vector));
-    return computed_impurity;
+    arma::vec prob_vec = DecisionTreeClassifier::compute_class_probability(Y);
+    float imp_val = 1 - arma::sum(arma::square(prob_vec));
+    return imp_val;
 }
 
 float DecisionTreeClassifier::compute_entropy (arma::vec& Y) {
-    arma::vec probability_vector = DecisionTreeClassifier::compute_class_probability(Y);
-    arma::uvec probability_vector_above_zero = arma::find(probability_vector > 0.0);
-    arma::vec probability_vector = probability_vector.elem(probability_vector_above_zero);
-    float computed_entropy = -(arma::sum(probability_vector * arma::log2(probability_vector)));
-    return computed_entropy;
+    arma::vec prob_vec = DecisionTreeClassifier::compute_class_probability(Y);
+    arma::uvec pos_idx = arma::find(prob_vec > 0.0);
+    arma::vec pos_prob = prob_vec.elem(pos_idx);
+    float ent_val = -(arma::sum(pos_prob * arma::log2(pos_prob)));
+    return ent_val;
 }
 
 float DecisionTreeClassifier::compute_information_gain (
@@ -111,15 +111,12 @@ std::vector<int> DecisionTreeClassifier::determine_feature_split_metric (std::ve
 }
 
 std::generator<GeneratorVariables*> DecisionTreeClassifier::split_yield (
-    SplitYieldParameters *yield_parameters,
-    GeneratorVariables *generator_variables
+    SplitYieldParameters *yield_params,
+    GeneratorVariables *gen_var
 ) {
-    SplitYieldParameters *yield_parameter = yield_parameter;
-    GeneratorVariables *gen_var = generator_variables;
-    
-    for (int index = 0; index < yield_parameter->num_feats.size(); index++) {
-        arma::vec column_subview = yield_parameter->X.col(
-            yield_parameter->num_feats.size()
+    for (int index = 0; index < yield_params->num_cols.size(); index++) {
+        arma::vec column_subview = yield_params->x_feat_mat.col(
+            yield_params->num_cols.size()
         );
 
         UniqueFunctionReturns subview_unq = unique(column_subview, false);
@@ -130,39 +127,49 @@ std::generator<GeneratorVariables*> DecisionTreeClassifier::split_yield (
         ) / 2.0;
 
         for (int inner_index = 0; inner_index < midpoints.n_elem; inner_index++) {
-            arma::uvec left_satisfying_indices = arma::find(
-                yield_parameters->X > midpoints[inner_index]
+            arma::uvec left_idx = arma::find(
+                yield_params->x_feat_mat > midpoints[inner_index]
             );
-            arma::uvec right_satisfying_indices = arma::find(
-                yield_parameters->X <= midpoints[inner_index]
+            arma::uvec right_idx = arma::find(
+                yield_params->x_feat_mat <= midpoints[inner_index]
             );
 
-            gen_var->split_type = "numeric";
-            gen_var->split_index = yield_parameter->num_feats[index];
-            gen_var->best_temporary_numeric_threshold = midpoints[inner_index];
-            gen_var->left_x_subset = yield_parameter->X.rows(left_satisfying_indices);
-            gen_var->left_y_subset = yield_parameter->Y.rows(left_satisfying_indices);
-            gen_var->right_x_subset = yield_parameter->X.rows(right_satisfying_indices);
-            gen_var->right_y_subset = yield_parameter->Y.rows(right_satisfying_indices);            
+            gen_var->split_kind = "numeric";
+            gen_var->split_idx = yield_params->num_cols[index];
+            gen_var->num_thresh = midpoints[inner_index];
+            gen_var->left_x_mat = yield_params->x_feat_mat.rows(left_idx);
+            gen_var->left_y_vec = yield_params->y_target_vec.rows(left_idx);
+            gen_var->right_x_mat = yield_params->x_feat_mat.rows(right_idx);
+            gen_var->right_y_vec = yield_params->y_target_vec.rows(right_idx);
         }
 
         co_yield gen_var;
     }
 
-    for (int index = 0; index < yield_parameter->cat_feats.size(); index++) {
-        arma::vec column_subview = yield_parameter->X.col(
-            yield_parameter->cat_feats[index]
+    for (int index = 0; index < yield_params->cat_cols.size(); index++) {
+        arma::vec column_subview = yield_params->x_feat_mat.col(
+            yield_params->cat_cols[index]
         );
         UniqueFunctionReturns subview_unq = unique(column_subview, false);
         
         for (int inner_index = 0; inner_index < subview_unq.labels.size(); inner_index++) {
-            arma::uvec left_satisfying_indices = arma::find(
-                yield_parameter->X == subview_unq.labels[inner_index]
+            arma::uvec left_idx = arma::find(
+                yield_params->x_feat_mat == subview_unq.labels[inner_index]
             );
-            arma::uvec right_satisfying_indices = arma::find(
-                yield_parameter->X != subview_unq.labels[inner_index]
+            arma::uvec right_idx = arma::find(
+                yield_params->x_feat_mat != subview_unq.labels[inner_index]
             );
+
+            gen_var->split_kind = "categorical";
+            gen_var->split_idx = yield_params->cat_cols[index];
+            gen_var->cat_thresh = subview_unq.labels[inner_index];
+            gen_var->left_x_mat = yield_params->x_feat_mat.rows(left_idx);
+            gen_var->left_y_vec = yield_params->y_target_vec.rows(left_idx);
+            gen_var->right_x_mat = yield_params->x_feat_mat.rows(right_idx);
+            gen_var->right_y_vec = yield_params->y_target_vec.rows(right_idx);
         }
+
+        co_yield gen_var;
     }
 }
 
