@@ -12,40 +12,42 @@
 #include "complex_datatypes.hpp"
 
 struct CreateNodeParameters {
-    std::variant<int, float>    numerical_feats;
-    std::variant<int, float>    categorical_feats;
-    std::vector<float>          computed_class_probabilities;
-    float                       information_gain;
-    int                         split_index;
-    bool                        create_decision_node;
-    bool                        create_leaf_node;
+    std::variant<int, float>    num_feats;
+    std::variant<int, float>    cat_feats;
+    std::vector<float>          class_probs;
+    float                       info_gain;
+    int                         split_idx;
+    bool                        make_decision;
+    bool                        make_leaf;
 };
 
 struct RecursiveTreeBuilder {
-    std::variant<int, float>    best_num_split_condition;
-    float                       best_information_gain;
-    int                         best_index;
-    int                         best_cat_split_condition;
-    arma::mat&                  best_left_x_subset;
-    arma::vec&                  best_left_y_subset;
-    arma::mat&                  best_right_x_subset;
-    arma::vec&                  best_right_y_subset;
+    arma::mat&                  left_x_mat;
+    arma::mat&                  right_x_mat;
+    arma::vec&                  left_y_vec;
+    arma::vec&                  right_y_vec;
+    std::variant<int, float>    num_cond;
+    float                       best_gain;
+    int                         best_idx;
+    int                         cat_cond;
 };
 
 struct SplitYieldParameters {
-    arma::mat                                  x_feat_mat;
-    arma::vec                                  y_target_vec;
+    arma::mat&              x_feat_mat;
+    arma::vec&              y_target_vec;
+    std::vector<int>        num_cols;
+    std::vector<int>        cat_cols;
 };
 
 struct GeneratorVariables {
-    std::string                 split_type;
-    int                         split_index;
-    std::variant<int, double>   best_temporary_numeric_threshold;
-    int                         best_temporary_categorical_threshold;
-    arma::mat&                  left_x_subset;
-    arma::vec&                  left_y_subset;
-    arma::mat&                  right_x_subset;
-    arma::vec&                  right_y_subset;
+    arma::mat&                  left_x_mat;
+    arma::mat&                  right_x_mat;
+    arma::vec&                  left_y_vec;
+    arma::vec&                  right_y_vec;
+    std::string                 split_kind;
+    std::variant<int, double>   num_thresh;
+    int                         cat_thresh;
+    int                         split_idx;
 };
 
 struct Node {
