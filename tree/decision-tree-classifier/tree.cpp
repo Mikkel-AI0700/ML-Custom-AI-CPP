@@ -13,7 +13,7 @@
 
 arma::vec DecisionTreeClassifier::compute_class_probability (arma::vec& Y) {
     std::vector<int> labels;
-    std::vector<int> lbl_counts;
+    std::vector<int> label_counts;
     UniqueFunctionReturns unq_ret = unique(Y, true);
     
     if (unique_classes.empty()) {
