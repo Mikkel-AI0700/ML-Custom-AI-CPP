@@ -59,13 +59,24 @@ struct Node {
     std::optional<float>                       num_condition;
     std::optional<float>                       cat_condition;
 
-    // Boolean flags for checking if Leaf or Decision
-    bool                                       is_leaf_node = false;
-    bool                                       is_decision_node = false;
+class DecisionNode {
+    public:
+        DecisionNode (
+            int split_index,
+            std::variant<int, float> num_condition,
+            std::variant<int, std::string> cat_condition
+        ):
+            split_index(split_index),
+            num_condition(num_condition),
+            cat_condition(cat_condition)
+        {}
 
-    // Unique pointers to the left and right branches
-    std::unique_ptr<Node>                      left_branch;
-    std::unique_ptr<Node>                      right_branch;
+    private:
+        bool is_leaf_node = false;
+        bool is_decision_node = true;
+        int split_index;
+        std::variant<int, float> num_condition;
+        std::variant<int, std::string> cat_condition;
 };
 
 class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
@@ -112,26 +123,27 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         std::map<int, int> classes_to_index;
         arma::vec compute_class_probability (arma::vec& Y);
 
-        // Math functions to compute impurity and randomness
+        // Mathematical functions to compute the best split
         float compute_impurity (arma::vec& Y);
         float compute_entropy (arma::vec& Y);
-        float compute_log_loss (
-            arma::vec& pred_y,
-            arma::vec& pred_y_prob
-        );
-        float compute_information_gain (
-            arma::vec& Y,
-            arma::vec& left_subset,
-            arma::vec& right_subset
-        );
+        float compute_log_loss (arma::vec& pred_y, arma::vec& pred_y_prob);
+        float compute_information_gain (arma::vec& Y, arma::mat& left_subset, arma::mat& right_subset);
 
-        // Functions that build the tree's node
+        // functions that split the data based on decisions
         float determine_impurity_metric (arma::vec& Y);
         std::vector<int> determine_feature_split_metric (
             std::vector<int> feature_list
         );
-        std::generator<GeneratorVariables&> split_yield (
-            SplitYieldParameters& yield_parameters,
-            GeneratorVariables& generator_parameters
+        std::generator<GeneratorVariables*> split_yield (
+            SplitYieldParameters* yield_parameters,
+            GeneratorVariables* generator_parameters
+        );
+        std::variant<LeafNode, DecisionNode> create_node (
+            CreateNodeParameters& node_parameters
+        );
+        std::variant<LeafNode, DecisionNode> build_decision_tree (
+            arma::mat& X, 
+            arma::vec& Y, 
+            int recusive_depth
         );
 };
