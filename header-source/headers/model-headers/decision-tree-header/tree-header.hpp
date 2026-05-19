@@ -62,20 +62,20 @@ class DecisionNode {
     public:
         DecisionNode (
             int split_index,
-            std::variant<int, float> split_feature_num_condition,
-            std::variant<int, std::string> split_feature_cat_condition
+            std::variant<int, float> num_condition,
+            std::variant<int, std::string> cat_condition
         ):
             split_index(split_index),
-            split_feature_num_condition(split_feature_num_condition),
-            split_feature_cat_condition(split_feature_cat_condition)
+            num_condition(num_condition),
+            cat_condition(cat_condition)
         {}
 
     private:
         bool is_leaf_node = false;
         bool is_decision_node = true;
         int split_index;
-        std::variant<int, float> split_feature_num_condition;
-        std::variant<int, std::string> split_feature_cat_condition;
+        std::variant<int, float> num_condition;
+        std::variant<int, std::string> cat_condition;
 };
 
 class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
@@ -120,17 +120,25 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         arma::vec prob_vec;
         std::map<int, int> classes_to_index;
         arma::vec compute_class_probability (arma::vec& Y);
+
+        // Mathematical functions to compute the best split
         float compute_impurity (arma::vec& Y);
         float compute_entropy (arma::vec& Y);
         float compute_log_loss (arma::vec& pred_y, arma::vec& pred_y_prob);
         float compute_information_gain (arma::vec& Y, arma::mat& left_subset, arma::mat& right_subset);
+
+        // functions that split the data based on decisions
         float determine_impurity_metric (arma::vec& Y);
-        std::vector<int> determine_feature_split_metric (std::vector<int> feature_list);
+        std::vector<int> determine_feature_split_metric (
+            std::vector<int> feature_list
+        );
         std::generator<GeneratorVariables*> split_yield (
             SplitYieldParameters* yield_parameters,
             GeneratorVariables* generator_parameters
         );
-        std::variant<LeafNode, DecisionNode> create_node (CreateNodeParameters& node_parameters);
+        std::variant<LeafNode, DecisionNode> create_node (
+            CreateNodeParameters& node_parameters
+        );
         std::variant<LeafNode, DecisionNode> build_decision_tree (
             arma::mat& X, 
             arma::vec& Y, 
