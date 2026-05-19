@@ -173,6 +173,20 @@ std::generator<GeneratorVariables*> DecisionTreeClassifier::split_yield (
     }
 }
 
+std::variant<LeafNode, DecisionNode> DecisionTreeClassifier::create_node (
+    CreateNodeParameters& node_parameter
+) {
+    
+}
+
+std::variant<LeafNode, DecisionNode> DecisionTreeClassifier::build_decision_tree (
+    arma::mat& X,
+    arma::vec& Y,
+    int recursive_max_depth
+) {
+
+}
+
 int main () {
 
 }
