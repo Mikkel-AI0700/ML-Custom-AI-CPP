@@ -4,7 +4,7 @@
 #include <memory>
 #include <cstdlib>
 #include <variant>
-#include <optional>
+#include <memory>
 #include <generator>
 #include <armadillo>
 #include "base.hpp"
@@ -50,35 +50,18 @@ struct GeneratorVariables {
     int                         split_idx;
 };
 
-class LeafNode {
-    public:
-        LeafNode (std::vector<float> computed_probabilities):
-            computed_probabilities(computed_probabilities)
-        {}
+struct Node {
+    // Leaf Node probabilities
+    std::vector<float> computed_probabilities;
 
     // Decision Node Data
-    int                                        split_index;
-    std::optional<float>                       num_condition;
-    std::optional<float>                       cat_condition;
+    int split_index;
+    float num_condition;
+    int cat_condition;
 
-class DecisionNode {
-    public:
-        DecisionNode (
-            int split_index,
-            std::variant<int, float> num_condition,
-            std::variant<int, std::string> cat_condition
-        ):
-            split_index(split_index),
-            num_condition(num_condition),
-            cat_condition(cat_condition)
-        {}
-
-    private:
-        bool is_leaf_node = false;
-        bool is_decision_node = true;
-        int split_index;
-        std::variant<int, float> num_condition;
-        std::variant<int, std::string> cat_condition;
+    // Boolean flags for checking if Leaf or Decision
+    bool is_leaf_node = false;
+    bool is_decision_node = false;
 };
 
 class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
@@ -144,10 +127,10 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
             SplitYieldParameters& yield_parameters,
             GeneratorVariables& generator_parameters
         );
-        std::variant<LeafNode, DecisionNode> create_node (
+        std::unique_ptr<Node> create_node (
             CreateNodeParameters& node_parameters
         );
-        std::variant<LeafNode, DecisionNode> build_decision_tree (
+        std::unique_ptr<Node> build_decision_tree (
             arma::mat& X, 
             arma::vec& Y, 
             int recusive_depth
