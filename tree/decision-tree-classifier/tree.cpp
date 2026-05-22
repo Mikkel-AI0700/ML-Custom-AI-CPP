@@ -118,13 +118,13 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
     }
 }
 
-std::generator<GeneratorVariables*> DecisionTreeClassifier::split_yield (
-    SplitYieldParameters *yield_params,
-    GeneratorVariables *gen_var
+std::generator<GeneratorVariables&> DecisionTreeClassifier::split_yield (
+    SplitYieldParameters &yield_params,
+    GeneratorVariables &gen_var
 ) {
-    for (int index = 0; index < yield_params->num_cols.size(); index++) {
-        arma::vec column_subview = yield_params->x_feat_mat.col(
-            yield_params->num_cols.size()
+    for (int index = 0; index < yield_params.num_cols.size(); index++) {
+        arma::vec column_subview = yield_params.x_feat_mat.col(
+            yield_params.num_cols.size()
         );
 
         UniqueFunctionReturns subview_unq = unique(column_subview, false);
@@ -136,45 +136,45 @@ std::generator<GeneratorVariables*> DecisionTreeClassifier::split_yield (
 
         for (int inner_index = 0; inner_index < midpoints.n_elem; inner_index++) {
             arma::uvec left_idx = arma::find(
-                yield_params->x_feat_mat > midpoints[inner_index]
+                yield_params.x_feat_mat > midpoints[inner_index]
             );
             arma::uvec right_idx = arma::find(
-                yield_params->x_feat_mat <= midpoints[inner_index]
+                yield_params.x_feat_mat <= midpoints[inner_index]
             );
 
-            gen_var->split_kind = "numeric";
-            gen_var->split_idx = yield_params->num_cols[index];
-            gen_var->num_thresh = midpoints[inner_index];
-            gen_var->left_x_mat = yield_params->x_feat_mat.rows(left_idx);
-            gen_var->left_y_vec = yield_params->y_target_vec.rows(left_idx);
-            gen_var->right_x_mat = yield_params->x_feat_mat.rows(right_idx);
-            gen_var->right_y_vec = yield_params->y_target_vec.rows(right_idx);
+            gen_var.split_kind = "numeric";
+            gen_var.split_idx = yield_params.num_cols[index];
+            gen_var.num_thresh = midpoints[inner_index];
+            gen_var.left_x_mat = yield_params.x_feat_mat.rows(left_idx);
+            gen_var.left_y_vec = yield_params.y_target_vec.rows(left_idx);
+            gen_var.right_x_mat = yield_params.x_feat_mat.rows(right_idx);
+            gen_var.right_y_vec = yield_params.y_target_vec.rows(right_idx);
 
             co_yield gen_var;
         }
     }
 
-    for (int index = 0; index < yield_params->cat_cols.size(); index++) {
-        arma::vec column_subview = yield_params->x_feat_mat.col(
-            yield_params->cat_cols[index]
+    for (int index = 0; index < yield_params.cat_cols.size(); index++) {
+        arma::vec column_subview = yield_params.x_feat_mat.col(
+            yield_params.cat_cols[index]
         );
         UniqueFunctionReturns subview_unq = unique(column_subview, false);
         
         for (int inner_index = 0; inner_index < subview_unq.labels.size(); inner_index++) {
             arma::uvec left_idx = arma::find(
-                yield_params->x_feat_mat == subview_unq.labels[inner_index]
+                yield_params.x_feat_mat == subview_unq.labels[inner_index]
             );
             arma::uvec right_idx = arma::find(
-                yield_params->x_feat_mat != subview_unq.labels[inner_index]
+                yield_params.x_feat_mat != subview_unq.labels[inner_index]
             );
 
-            gen_var->split_kind = "categorical";
-            gen_var->split_idx = yield_params->cat_cols[index];
-            gen_var->cat_thresh = subview_unq.labels[inner_index];
-            gen_var->left_x_mat = yield_params->x_feat_mat.rows(left_idx);
-            gen_var->left_y_vec = yield_params->y_target_vec.rows(left_idx);
-            gen_var->right_x_mat = yield_params->x_feat_mat.rows(right_idx);
-            gen_var->right_y_vec = yield_params->y_target_vec.rows(right_idx);
+            gen_var.split_kind = "categorical";
+            gen_var.split_idx = yield_params.cat_cols[index];
+            gen_var.cat_thresh = subview_unq.labels[inner_index];
+            gen_var.left_x_mat = yield_params.x_feat_mat.rows(left_idx);
+            gen_var.left_y_vec = yield_params.y_target_vec.rows(left_idx);
+            gen_var.right_x_mat = yield_params.x_feat_mat.rows(right_idx);
+            gen_var.right_y_vec = yield_params.y_target_vec.rows(right_idx);
 
             co_yield gen_var;
         }
