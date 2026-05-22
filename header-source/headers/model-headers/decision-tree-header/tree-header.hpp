@@ -18,33 +18,34 @@ struct CreateNodeParameters {
 };
 
 struct RecursiveTreeBuilder {
-    arma::mat&                  left_x_mat;
-    arma::mat&                  right_x_mat;
-    arma::vec&                  left_y_vec;
-    arma::vec&                  right_y_vec;
+    arma::mat                   left_x_mat;
+    arma::mat                   right_x_mat;
+    arma::vec                   left_y_vec;
+    arma::vec                   right_y_vec;
     std::variant<int, float>    num_cond;
     float                       best_gain;
     int                         best_idx;
     int                         cat_cond;
 };
 
-struct SplitYieldParameters {
-    arma::mat&              x_feat_mat;
-    arma::vec&              y_target_vec;
-    std::vector<int>        num_cols;
-    std::vector<int>        cat_cols;
-};
-
 struct GeneratorVariables {
-    arma::mat&                  left_x_mat;
-    arma::mat&                  right_x_mat;
-    arma::vec&                  left_y_vec;
-    arma::vec&                  right_y_vec;
+    arma::mat                   left_x_mat;
+    arma::mat                   right_x_mat;
+    arma::vec                   left_y_vec;
+    arma::vec                   right_y_vec;
     std::string                 split_kind;
     std::variant<int, double>   num_thresh;
     int                         cat_thresh;
     int                         split_idx;
 };
+
+struct SplitYieldParameters {
+    arma::mat               x_feat_mat;
+    arma::vec               y_target_vec;
+    std::vector<int>        num_cols;
+    std::vector<int>        cat_cols;
+};
+
 
 class LeafNode {
     public:
