@@ -149,9 +149,9 @@ std::generator<GeneratorVariables*> DecisionTreeClassifier::split_yield (
             gen_var->left_y_vec = yield_params->y_target_vec.rows(left_idx);
             gen_var->right_x_mat = yield_params->x_feat_mat.rows(right_idx);
             gen_var->right_y_vec = yield_params->y_target_vec.rows(right_idx);
-        }
 
-        co_yield gen_var;
+            co_yield gen_var;
+        }
     }
 
     for (int index = 0; index < yield_params->cat_cols.size(); index++) {
@@ -175,9 +175,9 @@ std::generator<GeneratorVariables*> DecisionTreeClassifier::split_yield (
             gen_var->left_y_vec = yield_params->y_target_vec.rows(left_idx);
             gen_var->right_x_mat = yield_params->x_feat_mat.rows(right_idx);
             gen_var->right_y_vec = yield_params->y_target_vec.rows(right_idx);
-        }
 
-        co_yield gen_var;
+            co_yield gen_var;
+        }
     }
 }
 
