@@ -32,6 +32,13 @@ struct RecursiveTreeBuilder {
     int                         cat_cond;
 };
 
+struct SplitYieldParameters {
+    arma::mat               x_feat_mat;
+    arma::vec               y_target_vec;
+    std::vector<int>        num_cols;
+    std::vector<int>        cat_cols;
+};
+
 struct GeneratorVariables {
     arma::mat                   left_x_mat;
     arma::mat                   right_x_mat;
@@ -42,14 +49,6 @@ struct GeneratorVariables {
     int                         cat_thresh;
     int                         split_idx;
 };
-
-struct SplitYieldParameters {
-    arma::mat               x_feat_mat;
-    arma::vec               y_target_vec;
-    std::vector<int>        num_cols;
-    std::vector<int>        cat_cols;
-};
-
 
 class LeafNode {
     public:
@@ -126,20 +125,24 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         std::map<int, int> classes_to_index;
         arma::vec compute_class_probability (arma::vec& Y);
 
-        // Mathematical functions to compute the best split
+        // Math functions to compute impurity and randomness
         float compute_impurity (arma::vec& Y);
         float compute_entropy (arma::vec& Y);
         float compute_log_loss (arma::vec& pred_y, arma::vec& pred_y_prob);
-        float compute_information_gain (arma::vec& Y, arma::mat& left_subset, arma::mat& right_subset);
+        float compute_information_gain (
+            arma::vec& Y, 
+            arma::mat& left_subset, 
+            arma::mat& right_subset
+        );
 
-        // functions that split the data based on decisions
+        // Functions that build the tree's node
         float determine_impurity_metric (arma::vec& Y);
         std::vector<int> determine_feature_split_metric (
             std::vector<int> feature_list
         );
-        std::generator<GeneratorVariables*> split_yield (
-            SplitYieldParameters* yield_parameters,
-            GeneratorVariables* generator_parameters
+        std::generator<GeneratorVariables&> split_yield (
+            SplitYieldParameters& yield_parameters,
+            GeneratorVariables& generator_parameters
         );
         std::variant<LeafNode, DecisionNode> create_node (
             CreateNodeParameters& node_parameters
