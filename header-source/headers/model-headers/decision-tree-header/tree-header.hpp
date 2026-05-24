@@ -12,13 +12,13 @@
 #include "complex_datatypes.hpp"
 
 struct CreateNodeParameters {
-    std::variant<int, float>    num_feats;
-    std::variant<int, float>    cat_feats;
-    std::vector<float>          class_probs;
-    float                       info_gain;
-    int                         split_idx;
-    bool                        make_decision;
-    bool                        make_leaf;
+    float*                       num_feats = nullptr;
+    std::variant<int, float>*    cat_feats = nullptr;
+    std::vector<float>*           class_probs;
+    float                        info_gain;
+    int                          split_idx;
+    bool                         make_decision;
+    bool                         make_leaf;
 };
 
 struct RecursiveTreeBuilder {
@@ -26,7 +26,7 @@ struct RecursiveTreeBuilder {
     arma::mat                   right_x_mat;
     arma::vec                   left_y_vec;
     arma::vec                   right_y_vec;
-    std::variant<int, float>    num_cond;
+    float                       num_cond;
     float                       best_gain;
     int                         best_idx;
     int                         cat_cond;
@@ -52,16 +52,16 @@ struct GeneratorVariables {
 
 struct Node {
     // Leaf Node probabilities
-    std::vector<float> computed_probabilities;
+    std::vector<float>*          computed_probabilities;
 
     // Decision Node Data
-    int split_index;
-    float num_condition;
-    int cat_condition;
+    int                         split_index;
+    float*                      num_condition = nullptr;
+    std::variant<int, float>*   cat_condition = nullptr;
 
     // Boolean flags for checking if Leaf or Decision
-    bool is_leaf_node = false;
-    bool is_decision_node = false;
+    bool                        is_leaf_node = false;
+    bool                        is_decision_node = false;
 };
 
 class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
