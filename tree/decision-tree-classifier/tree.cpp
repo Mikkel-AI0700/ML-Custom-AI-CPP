@@ -3,8 +3,8 @@
 #include <vector>
 #include <cstdlib>
 #include <variant>
-#include <optional>
 #include <algorithm>
+#include <optional>
 #include <generator>
 #include <armadillo>
 #include "loader.hpp"
@@ -181,13 +181,34 @@ std::generator<GeneratorVariables&> DecisionTreeClassifier::split_yield (
     }
 }
 
-std::variant<LeafNode, DecisionNode> DecisionTreeClassifier::create_node (
+std::unique_ptr<Node> DecisionTreeClassifier::create_node (
     CreateNodeParameters& node_parameter
 ) {
-    
+    auto node = std::make_unique<Node>();
+
+    if (node_parameter.make_decision) {
+        auto num_feat_ptr = node_parameter.num_feats;
+        auto cat_feat_ptr = node_parameter.cat_feats;
+
+        if (!num_feat_ptr) {
+            node->num_condition = node_parameter.num_feats;
+        }
+
+        if (!cat_feat_ptr) {
+            node->cat_condition = node_parameter.cat_feats;
+        }
+
+        node->split_index = node_parameter.split_idx;
+    }
+
+    if (node_parameter.make_leaf) {
+        node->computed_probabilities = node_parameter.class_probs;
+    }
+
+    return node;
 }
 
-std::variant<LeafNode, DecisionNode> DecisionTreeClassifier::build_decision_tree (
+std::unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
     arma::mat& X,
     arma::vec& Y,
     int recursive_max_depth
