@@ -1,9 +1,9 @@
 #include <vector>
-#include <variant>
 #include <memory>
+#include <cstdlib>
+#include <variant>
 #include <generator>
 #include <armadillo>
-#include <cstdlib>
 #include "base.hpp"
 #include "classifier_mixin.hpp"
 #include "complex_datatypes.hpp"
@@ -30,10 +30,10 @@ struct RecursiveTreeBuilder {
 };
 
 struct SplitYieldParameters {
-    arma::mat               x_feat_mat;
-    arma::vec               y_target_vec;
-    std::vector<int>        num_cols;
-    std::vector<int>        cat_cols;
+    arma::mat                   x_feat_mat;
+    arma::vec                   y_target_vec;
+    std::vector<int>            num_cols;
+    std::vector<int>            cat_cols;
 };
 
 struct GeneratorVariables {
@@ -49,7 +49,7 @@ struct GeneratorVariables {
 
 struct Node {
     // Leaf Node probabilities
-    std::vector<float>*          computed_probabilities;
+    std::vector<float>*         computed_probabilities;
 
     // Decision Node Data
     int                         split_index;
