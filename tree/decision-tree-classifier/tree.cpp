@@ -51,17 +51,21 @@ float DecisionTreeClassifier::compute_entropy (arma::vec& Y) {
     return ent_val;
 }
 
+float DecisionTreeClassifier::compute_log_loss (arma::vec& Y, arma::vec& prob_vec) {
+
+}
+
 float DecisionTreeClassifier::compute_information_gain (
-    vec& Y,
-    vec& left_subset,
-    vec& right_subset
+    arma::vec& Y, 
+    arma::vec& left_subset,
+    arma::vec& right_subset
 ) {
     float main_data_imp = DecisionTreeClassifier::determine_impurity_metric(Y);
     float left_subset_imp = DecisionTreeClassifier::determine_impurity_metric(left_subset);
     float right_subset_imp = DecisionTreeClassifier::determine_impurity_metric(right_subset);
 
-    float left_subset_weighted = (static_cast<float>(left_subset.n_rows) / static_cast<float>(Y.n_rows)) * left_subset_imp;
-    float right_subset_weighted = (static_cast<float>(right_subset.n_rows) / static_cast<float>(Y.n_rows)) * right_subset_imp;
+    float left_subset_weighted = left_subset.n_rows / Y.n_rows * left_subset_imp;
+    float right_subset_weighted = right_subset.n_rows / Y.n_rows * right_subset_imp;
 
     return main_data_imp - (left_subset_weighted + right_subset_weighted);
 }
@@ -186,7 +190,7 @@ std::unique_ptr<Node> DecisionTreeClassifier::create_node (
 ) {
     auto node = std::make_unique<Node>();
 
-    if (node_parameter.make_decision) {
+    if (node_parameter.make_decision_node) {
         auto num_feat_ptr = node_parameter.num_feats;
         auto cat_feat_ptr = node_parameter.cat_feats;
 
@@ -198,10 +202,12 @@ std::unique_ptr<Node> DecisionTreeClassifier::create_node (
             node->cat_condition = node_parameter.cat_feats;
         }
 
+        node->is_decision_node = true;
         node->split_index = node_parameter.split_idx;
     }
 
-    if (node_parameter.make_leaf) {
+    if (node_parameter.make_leaf_node) {
+        node->is_leaf_node = true;
         node->computed_probabilities = node_parameter.class_probs;
     }
 
@@ -213,7 +219,42 @@ std::unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
     arma::vec& Y,
     int recursive_max_depth
 ) {
+    CreateNodeParameters node_param;
+    RecursiveTreeBuilder rec_build;
+    SplitYieldParameters splt_yld;
+    GeneratorVariables gen_var;
 
+    if (recursive_max_depth == max_depth) {
+        std::cout << "[*] Stopping training. Max depth hit" << std::endl;
+        auto node = DecisionTreeClassifier::create_node(node_param);
+        return node;
+    }
+
+    if (X.n_rows <= min_samples_split) {
+        std::cout << "[*] Stopping training. Min samples split hit" << std::endl;
+        auto node = DecisionTreeClassifier::create_node(node_param);
+        return node;
+    }
+
+    for (GeneratorVariables& gen_var : DecisionTreeClassifier::split_yield(splt_yld, gen_var)) {
+        float crt_inf_gain = DecisionTreeClassifier::compute_information_gain(
+            Y,
+            gen_var.left_y_vec,
+            gen_var.right_y_vec
+        );
+
+        if (gen_var.split_kind == "numeric") {
+            if (crt_inf_gain > rec_build.best_gain) {
+                // Logic here
+            }
+        }
+
+        if (gen_var.split_kind == "categorical") {
+            if (crt_inf_gain > rec_build.best_gain) {
+
+            }
+        }
+    }
 }
 
 int main () {
