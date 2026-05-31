@@ -4,6 +4,7 @@
 #include <memory>
 #include <cstdlib>
 #include <variant>
+#include <optional>
 #include <generator>
 #include <armadillo>
 #include "base.hpp"
@@ -11,56 +12,56 @@
 #include "complex_datatypes.hpp"
 
 struct CreateNodeParameters {
-    float*                       num_feats = nullptr;
-    std::variant<int, float>*    cat_feats = nullptr;
-    std::vector<float>*           class_probs;
-    float                        info_gain;
-    int                          split_idx;
-    bool                         make_decision;
-    bool                         make_leaf;
+    std::optional<float>*                       num_feats;
+    std::optional<std::variant<int, float>>*    cat_feats;
+    std::vector<float>*                         class_probs;
+    float                                       info_gain;
+    int                                         split_idx;
+    bool                                        make_decision_node;
+    bool                                        make_leaf_node;
 };
 
 struct RecursiveTreeBuilder {
-    arma::mat                   left_x_mat;
-    arma::mat                   right_x_mat;
-    arma::vec                   left_y_vec;
-    arma::vec                   right_y_vec;
-    float                       num_cond;
-    float                       best_gain;
-    int                         best_idx;
-    int                         cat_cond;
+    arma::mat                                  left_x_mat;
+    arma::mat                                  right_x_mat;
+    arma::vec                                  left_y_vec;
+    arma::vec                                  right_y_vec;
+    float                                      num_cond;
+    float                                      best_gain;
+    int                                        best_idx;
+    int                                        cat_cond;
 };
 
 struct SplitYieldParameters {
-    arma::mat                   x_feat_mat;
-    arma::vec                   y_target_vec;
-    std::vector<int>            num_cols;
-    std::vector<int>            cat_cols;
+    arma::mat                                  x_feat_mat;
+    arma::vec                                  y_target_vec;
+    std::vector<int>                           num_cols;
+    std::vector<int>                           cat_cols;
 };
 
 struct GeneratorVariables {
-    arma::mat                   left_x_mat;
-    arma::mat                   right_x_mat;
-    arma::vec                   left_y_vec;
-    arma::vec                   right_y_vec;
-    std::string                 split_kind;
-    std::variant<int, double>   num_thresh;
-    int                         cat_thresh;
-    int                         split_idx;
+    arma::mat                                  left_x_mat;
+    arma::mat                                  right_x_mat;
+    arma::vec                                  left_y_vec;
+    arma::vec                                  right_y_vec;
+    std::string                                split_kind;
+    float                                      num_thresh;
+    int                                        cat_thresh;
+    int                                        split_idx;
 };
 
 struct Node {
     // Leaf Node probabilities
-    std::vector<float>*         computed_probabilities;
+    std::vector<float>*                        computed_probabilities;
 
     // Decision Node Data
-    int                         split_index;
-    float*                      num_condition = nullptr;
-    std::variant<int, float>*   cat_condition = nullptr;
+    int                                        split_index;
+    std::optional<float>*                      num_condition;
+    std::optional<std::variant<int, float>>*   cat_condition;
 
     // Boolean flags for checking if Leaf or Decision
-    bool                        is_leaf_node = false;
-    bool                        is_decision_node = false;
+    bool                                       is_leaf_node = false;
+    bool                                       is_decision_node = false;
 };
 
 class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
@@ -113,8 +114,8 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         float compute_log_loss (arma::vec& pred_y, arma::vec& pred_y_prob);
         float compute_information_gain (
             arma::vec& Y, 
-            arma::mat& left_subset, 
-            arma::mat& right_subset
+            arma::vec& left_subset, 
+            arma::vec& right_subset
         );
 
         // Functions that build the tree's node
