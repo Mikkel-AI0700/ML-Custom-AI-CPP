@@ -12,8 +12,8 @@
 #include "complex_datatypes.hpp"
 
 struct CreateNodeParameters {
-    std::optional<float>*                       num_feats;
-    std::optional<std::variant<int, float>>*    cat_feats;
+    std::optional<float>                        num_feats;
+    std::optional<std::variant<int, float>>     cat_feats;
     std::vector<float>*                         class_probs;
     float                                       info_gain;
     int                                         split_idx;
@@ -56,8 +56,8 @@ struct Node {
 
     // Decision Node Data
     int                                        split_index;
-    std::optional<float>*                      num_condition;
-    std::optional<std::variant<int, float>>*   cat_condition;
+    std::optional<float>                       num_condition;
+    std::optional<std::variant<int, float>>    cat_condition;
 
     // Boolean flags for checking if Leaf or Decision
     bool                                       is_leaf_node = false;
