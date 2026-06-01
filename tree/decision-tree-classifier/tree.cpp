@@ -89,7 +89,7 @@ std::vector<int> DecisionTreeClassifier::determine_feature_split_metric (std::ve
         int generated_number;
 
         if (!string_ptr || !integer_ptr) {
-            return;
+            return selected_features;
         }
 
         if (std::get<std::string>(max_features) == "sqrt") {
@@ -117,7 +117,7 @@ std::vector<int> DecisionTreeClassifier::determine_feature_split_metric (std::ve
 
         return selected_features;
     } catch (const std::bad_variant_access& error) {
-        std::cout << "Error: " << error.what() << std::endl;
+        std::cout << "Error: " << error.what();
     }
 }
 
@@ -244,16 +244,74 @@ std::unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
 
         if (gen_var.split_kind == "numeric") {
             if (crt_inf_gain > rec_build.best_gain) {
-                // Logic here
+                rec_build.best_gain = crt_inf_gain;
+                rec_build.best_idx = gen_var.split_idx;
+                rec_build.num_cond = gen_var.num_thresh;
+
+                // Left and Right decision matrices
+                rec_build.left_x_mat = gen_var.left_x_mat;
+                rec_build.right_x_mat = gen_var.right_x_mat;
+
+                // Left and Right decision split vectors
+                rec_build.left_y_vec = gen_var.left_y_vec;
+                rec_build.right_y_vec = gen_var.right_y_vec;
             }
+        } else {
+            continue;
         }
 
         if (gen_var.split_kind == "categorical") {
             if (crt_inf_gain > rec_build.best_gain) {
+                rec_build.best_gain = crt_inf_gain;
+                rec_build.best_idx = gen_var.split_idx;
+                rec_build.cat_cond = gen_var.cat_thresh;
 
+                // Left and Right decision matrices
+                rec_build.left_x_mat = gen_var.left_x_mat;
+                rec_build.right_x_mat = gen_var.right_x_mat;
+
+                // Left and Right decision vectors
+                rec_build.left_y_vec = gen_var.left_y_vec;
+                rec_build.right_y_vec = gen_var.right_y_vec;
             }
+        } else {
+            continue;
         }
     }
+
+    if (rec_build.best_gain < min_information_gain) {
+        std::cout << "[*] Stopping training! Minimum Information Gain hit.";
+        auto leaf_node = DecisionTreeClassifier::create_node(node_param);
+        return leaf_node;
+    }
+
+    if (rec_build.left_y_vec.n_rows != 0 || rec_build.right_y_vec.n_rows != 0) {
+        if (rec_build.left_y_vec.n_rows < min_samples_leaf || 
+            rec_build.right_y_vec.n_rows < min_samples_leaf
+        ) {
+            std::cout << "[*] Stopping training! Minimum samples per leaf hit.";
+            auto leaf_node = DecisionTreeClassifier::create_node(node_param);
+            return leaf_node;
+        }
+    }
+
+    auto decision_node = DecisionTreeClassifier::create_node(node_param);
+
+    // Left branch of the tree
+    DecisionTreeClassifier::build_decision_tree(
+        rec_build.left_x_mat,
+        rec_build.left_y_vec,
+        ++recursive_max_depth
+    );
+
+    // Right branch of the tree
+    DecisionTreeClassifier::build_decision_tree(
+        rec_build.right_x_mat,
+        rec_build.right_y_vec,
+        ++recursive_max_depth
+    );
+
+    return decision_node;
 }
 
 int main () {
