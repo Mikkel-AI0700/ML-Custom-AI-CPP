@@ -60,6 +60,10 @@ struct Node {
     // Boolean flags for checking if Leaf or Decision
     bool                                       is_leaf_node = false;
     bool                                       is_decision_node = false;
+
+    // Unique pointers to the left and right branches
+    std::unique_ptr<Node>                      left_branch;
+    std::unique_ptr<Node>                      right_branch; 
 };
 
 class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
@@ -100,6 +104,7 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         arma::vec predict (arma::mat& X) override;
 
     private:
+        Node root_node;
         std::vector<int> unique_classes;
         arma::vec prob_vec;
         std::map<int, int> classes_to_index;
@@ -108,7 +113,10 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         // Math functions to compute impurity and randomness
         float compute_impurity (arma::vec& Y);
         float compute_entropy (arma::vec& Y);
-        float compute_log_loss (arma::vec& pred_y, arma::vec& pred_y_prob);
+        float compute_log_loss (
+            arma::vec& pred_y, 
+            arma::vec& pred_y_prob
+        );
         float compute_information_gain (
             arma::vec& Y, 
             arma::vec& left_subset, 
@@ -131,5 +139,9 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
             arma::mat& X, 
             arma::vec& Y, 
             int recusive_depth
+        );
+        float traverse_tree_prediction (
+            arma::vec element, 
+            std::unique_ptr<Node> node
         );
 };
