@@ -298,20 +298,62 @@ std::unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
     auto decision_node = DecisionTreeClassifier::create_node(node_param);
 
     // Left branch of the tree
-    DecisionTreeClassifier::build_decision_tree(
+    decision_node->left_branch = DecisionTreeClassifier::build_decision_tree(
         rec_build.left_x_mat,
         rec_build.left_y_vec,
         ++recursive_max_depth
     );
 
     // Right branch of the tree
-    DecisionTreeClassifier::build_decision_tree(
+    decision_node->right_branch = DecisionTreeClassifier::build_decision_tree(
         rec_build.right_x_mat,
         rec_build.right_y_vec,
         ++recursive_max_depth
     );
 
     return decision_node;
+}
+
+float DecisionTreeClassifieer::traverse_tree_prediction (
+    arma::vec element, 
+    std::unique_ptr<Node> node
+) {
+    if (node->is_leaf_node) {
+        // Logic here
+    }
+
+    if (node->num_condition.has_value()) {
+        if (element.at(node->split_index) > node->num_condition) {
+            return DecisionTreeClassifier::traverse_tree_prediction(
+                element,
+                node->left_branch
+            );
+        } else {
+            return DecisionTreeClassifier::traverse_tree_prediction(
+                element,
+                node->right_branch
+            );
+        }
+    }
+
+    if (node->cat_condition.has_value()) {
+        float float_cat_cond = std::get<float>(node->cat_condition);
+        if (element.at(node->split_index) == node->float_cat_cond) {
+            return DecisionTreeClassifier::traverse_tree_prediction(
+                element,
+                node->left_branch
+            );
+        } else {
+            return DecisionTreeClassifier::traverse_tree_prediction(
+                element,
+                node->right_branch
+            );
+        }
+    }
+
+    // Big TODO for you Sebastien: Figure out the mess
+    // you made with the Node struct and figure out how the tree
+    // knows if it's going left or right.
 }
 
 int main () {
