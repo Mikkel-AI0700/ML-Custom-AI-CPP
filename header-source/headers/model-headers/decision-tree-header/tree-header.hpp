@@ -26,10 +26,10 @@ struct RecursiveTreeBuilder {
     arma::mat                                  right_x_mat;
     arma::vec                                  left_y_vec;
     arma::vec                                  right_y_vec;
-    float                                      num_cond;
+    std::optional<float>                       num_cond;
     float                                      best_gain;
     int                                        best_idx;
-    int                                        cat_cond;
+    std::optional<int>                         cat_cond;
 };
 
 struct SplitYieldParameters {
@@ -135,7 +135,9 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
             GeneratorVariables& generator_parameters
         );
         std::unique_ptr<Node> create_node (
-            CreateNodeParameters& node_parameters
+            RecursiveTreeBuilder& rec_tree_build,
+            bool create_decision_node,
+            bool create_leaf_node
         );
         std::unique_ptr<Node> build_decision_tree (
             arma::mat& X, 
