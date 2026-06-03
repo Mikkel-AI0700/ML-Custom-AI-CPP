@@ -184,29 +184,28 @@ std::generator<GeneratorVariables&> DecisionTreeClassifier::split_yield (
 }
 
 std::unique_ptr<Node> DecisionTreeClassifier::create_node (
-    CreateNodeParameters& node_parameter
+    RecursiveTreeBuilder& rec_tree_build,
+    bool create_decision_node,
+    bool create_leaf_node
 ) {
     auto node = std::make_unique<Node>();
 
-    if (node_parameter.make_decision_node) {
-        auto num_feat_ptr = node_parameter.num_feats;
-        auto cat_feat_ptr = node_parameter.cat_feats;
-
-        if (!num_feat_ptr) {
-            node->num_condition = node_parameter.num_feats;
+    if (create_decision_node) {
+        if (rec_tree_build.num_cond.has_value()) {
+            node->num_condition = rec_tree_build.num_cond;
         }
 
-        if (!cat_feat_ptr) {
-            node->cat_condition = node_parameter.cat_feats;
+        if (rec_tree_build.cat_cond.has_value()) {
+            node->cat_condition = rec_tree_build.cat_cond;
         }
 
         node->is_decision_node = true;
-        node->split_index = node_parameter.split_idx;
+        node->split_index = rec_tree_build.best_idx;
     }
 
-    if (node_parameter.make_leaf_node) {
+    if (create_leaf_node) {
         node->is_leaf_node = true;
-        node->computed_probabilities = node_parameter.class_probs;
+        node->computed_probabilities = rec_tree_build.computed_probs;
     }
 
     return node;
@@ -224,13 +223,13 @@ std::unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
 
     if (recursive_max_depth == max_depth) {
         std::cout << "[*] Stopping training. Max depth hit" << std::endl;
-        auto node = DecisionTreeClassifier::create_node(node_param);
+        auto node = DecisionTreeClassifier::create_node(rec_build, false, true);
         return node;
     }
 
     if (X.n_rows <= min_samples_split) {
         std::cout << "[*] Stopping training. Min samples split hit" << std::endl;
-        auto node = DecisionTreeClassifier::create_node(node_param);
+        auto node = DecisionTreeClassifier::create_node(rec_build, false, true);
         return node;
     }
 
@@ -280,7 +279,7 @@ std::unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
 
     if (rec_build.best_gain < min_information_gain) {
         std::cout << "[*] Stopping training! Minimum Information Gain hit.";
-        auto leaf_node = DecisionTreeClassifier::create_node(node_param);
+        auto leaf_node = DecisionTreeClassifier::create_node(rec_build, false, true);
         return leaf_node;
     }
 
@@ -289,12 +288,12 @@ std::unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
             rec_build.right_y_vec.n_rows < min_samples_leaf
         ) {
             std::cout << "[*] Stopping training! Minimum samples per leaf hit.";
-            auto leaf_node = DecisionTreeClassifier::create_node(node_param);
+            auto leaf_node = DecisionTreeClassifier::create_node(rec_build, false, true);
             return leaf_node;
         }
     }
 
-    auto decision_node = DecisionTreeClassifier::create_node(node_param);
+    auto decision_node = DecisionTreeClassifier::create_node(rec_build, true, false);
 
     // Left branch of the tree
     decision_node->left_branch = DecisionTreeClassifier::build_decision_tree(
@@ -313,9 +312,9 @@ std::unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
     return decision_node;
 }
 
-float DecisionTreeClassifieer::traverse_tree_prediction (
-    arma::vec element, 
-    std::unique_ptr<Node> node
+float DecisionTreeClassifier::traverse_tree_prediction (
+    arma::mat element, 
+    const std::unique_ptr<Node>& node
 ) {
     if (node->is_leaf_node) {
         // Logic here
@@ -336,8 +335,8 @@ float DecisionTreeClassifieer::traverse_tree_prediction (
     }
 
     if (node->cat_condition.has_value()) {
-        float float_cat_cond = std::get<float>(node->cat_condition);
-        if (element.at(node->split_index) == node->float_cat_cond) {
+        float float_cat_cond = std::get<float>(node->cat_condition.value());
+        if (element.at(node->split_index) == float_cat_cond) {
             return DecisionTreeClassifier::traverse_tree_prediction(
                 element,
                 node->left_branch
@@ -349,10 +348,32 @@ float DecisionTreeClassifieer::traverse_tree_prediction (
             );
         }
     }
+}
 
-    // Big TODO for you Sebastien: Figure out the mess
-    // you made with the Node struct and figure out how the tree
-    // knows if it's going left or right.
+void DecisionTreeClassifier::fit (arma::mat& X, arma::vec& Y) {
+    int recursive_max_depth = 1;
+    root_node = DecisionTreeClassifier::build_decision_tree(
+        X,
+        Y,
+        recursive_max_depth
+    );
+}
+
+arma::vec DecisionTreeClassifier::predict (arma::mat& Y) {
+    std::vector<float> predictions;
+
+    if (unique_classes.empty()) {
+        std::cout << "[*] Error: DecisionTreeClassifier has not been fitted yet";
+    }
+
+    for (int index = 0; index < Y.n_rows; index++) {
+        arma::mat row = Y.row(index);
+        float prediction = DecisionTreeClassifier::traverse_tree_prediction(
+            row,
+            root_node
+        );
+        predictions.push_back(prediction);
+    }
 }
 
 int main () {
