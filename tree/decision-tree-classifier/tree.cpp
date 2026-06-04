@@ -374,10 +374,6 @@ vec DecisionTreeClassifier::predict (mat& Y) {
 
     for (int index = 0; index < Y.n_rows; index++) {
         mat row = Y.row(index);
-        float prediction = DecisionTreeClassifier::traverse_tree_prediction(
-            row,
-            root_node
-        );
         predictions.push_back(
             DecisionTreeClassifier::traverse_tree_prediction(
                 row,
