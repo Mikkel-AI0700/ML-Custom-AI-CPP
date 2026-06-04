@@ -26,6 +26,7 @@ struct RecursiveTreeBuilder {
     arma::mat                                  right_x_mat;
     arma::vec                                  left_y_vec;
     arma::vec                                  right_y_vec;
+    std::vector<float>                         computed_probs;
     std::optional<float>                       num_cond;
     float                                      best_gain;
     int                                        best_idx;
@@ -52,7 +53,7 @@ struct GeneratorVariables {
 
 struct Node {
     // Leaf Node probabilities
-    std::vector<float>*                        computed_probabilities;
+    std::vector<float>                         computed_probabilities;
 
     // Decision Node Data
     int                                        split_index;
@@ -103,10 +104,10 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         {}
 
         void fit (arma::mat& X, arma::vec& Y) override;
-        arma::vec predict (arma::mat& X) override;
+        arma::vec predict (arma::mat& Y) override;
 
     private:
-        Node root_node;
+        std::unique_ptr<Node> root_node;
         std::vector<int> unique_classes;
         arma::vec prob_vec;
         std::map<int, int> classes_to_index;
@@ -142,10 +143,10 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         std::unique_ptr<Node> build_decision_tree (
             arma::mat& X, 
             arma::vec& Y, 
-            int recusive_depth
+            int recursive_max_depth
         );
         float traverse_tree_prediction (
-            arma::vec element, 
-            std::unique_ptr<Node> node
+            arma::mat element, 
+            const std::unique_ptr<Node>& node
         );
 };
