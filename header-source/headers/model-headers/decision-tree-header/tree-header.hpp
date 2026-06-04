@@ -28,7 +28,7 @@ struct RecursiveTreeBuilder {
     std::optional<float>                       num_cond;
     float                                      best_gain;
     int                                        best_idx;
-    std::optional<int>                         cat_cond;
+    std::optional<std::variant<int, float>>    cat_cond;
 };
 
 struct SplitYieldParameters {
