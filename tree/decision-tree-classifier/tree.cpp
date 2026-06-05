@@ -134,7 +134,7 @@ generator<GeneratorVariables&> DecisionTreeClassifier::split_yield (
     SplitYieldParameters &yield_params,
     GeneratorVariables &gen_var
 ) {
-    for (int index = 0; index < yield_params.num_cols.size(); index++) {
+    for (int index = 0; index < numerical_features.size(); index++) {
         vec column_subview = yield_params.x_feat_mat.col(index);
 
         UniqueFunctionReturns subview_unq = unique(column_subview, false);
@@ -153,7 +153,7 @@ generator<GeneratorVariables&> DecisionTreeClassifier::split_yield (
             );
 
             gen_var.split_kind = "numeric";
-            gen_var.split_idx = yield_params.num_cols[index];
+            gen_var.split_idx = numerical_features[index];
             gen_var.num_thresh = midpoints[inner_index];
             gen_var.left_x_mat = yield_params.x_feat_mat.rows(left_idx);
             gen_var.left_y_vec = yield_params.y_target_vec.rows(left_idx);
@@ -164,10 +164,8 @@ generator<GeneratorVariables&> DecisionTreeClassifier::split_yield (
         }
     }
 
-    for (int index = 0; index < yield_params.cat_cols.size(); index++) {
-        vec column_subview = yield_params.x_feat_mat.col(
-            yield_params.cat_cols[index]
-        );
+    for (int index = 0; index < categorical_features.size(); index++) {
+        vec column_subview = yield_params.x_feat_mat.col(index);
         UniqueFunctionReturns subview_unq = unique(column_subview, false);
         
         for (int inner_index = 0; inner_index < subview_unq.labels.size(); inner_index++) {
@@ -179,7 +177,7 @@ generator<GeneratorVariables&> DecisionTreeClassifier::split_yield (
             );
 
             gen_var.split_kind = "categorical";
-            gen_var.split_idx = yield_params.cat_cols[index];
+            gen_var.split_idx = categorical_features[index];
             gen_var.cat_thresh = subview_unq.labels[inner_index];
             gen_var.left_x_mat = yield_params.x_feat_mat.rows(left_idx);
             gen_var.left_y_vec = yield_params.y_target_vec.rows(left_idx);
@@ -192,28 +190,28 @@ generator<GeneratorVariables&> DecisionTreeClassifier::split_yield (
 }
 
 unique_ptr<Node> DecisionTreeClassifier::create_node (
-    RecursiveTreeBuilder& rec_tree_build,
+    BestCandidateSplit& best_candidate_var,
     bool create_decision_node,
     bool create_leaf_node
 ) {
     auto node = std::make_unique<Node>();
 
     if (create_decision_node) {
-        if (rec_tree_build.num_cond.has_value()) {
-            node->num_condition = rec_tree_build.num_cond;
+        if (best_candidate_var.num_cond.has_value()) {
+            node->num_condition = best_candidate_var.num_cond;
         }
 
-        if (rec_tree_build.cat_cond.has_value()) {
-            node->cat_condition = rec_tree_build.cat_cond;
+        if (best_candidate_var.cat_cond.has_value()) {
+            node->cat_condition = best_candidate_var.cat_cond;
         }
 
         node->is_decision_node = true;
-        node->split_index = rec_tree_build.best_idx;
+        node->split_index = best_candidate_var.best_idx;
     }
 
     if (create_leaf_node) {
         node->is_leaf_node = true;
-        node->computed_probabilities = rec_tree_build.computed_probs;
+        node->computed_probabilities = best_candidate_var.computed_probs;
     }
 
     return node;
@@ -224,20 +222,25 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
     vec& Y,
     int recursive_max_depth
 ) {
-    CreateNodeParameters node_param;
-    RecursiveTreeBuilder rec_build;
+    BestCandidateSplit best_candidate_var;
     SplitYieldParameters splt_yld;
     GeneratorVariables gen_var;
 
+    // Explicitly assigning the X and Y matrix and vector
+    splt_yld.x_feat_mat = X;
+    splt_yld.y_target_vec = Y;
+
     if (recursive_max_depth == max_depth) {
         cout << "[*] Stopping training. Max depth hit" << std::endl;
-        auto node = DecisionTreeClassifier::create_node(rec_build, false, true);
+        best_candidate_var.computed_probs = DecisionTreeClassifier::compute_class_probability(Y);
+        auto node = DecisionTreeClassifier::create_node(best_candidate_var, false, true);
         return node;
     }
 
     if (X.n_rows <= min_samples_split) {
         cout << "[*] Stopping training. Min samples split hit" << std::endl;
-        auto node = DecisionTreeClassifier::create_node(rec_build, false, true);
+        best_candidate_var.computed_probs = DecisionTreeClassifier::compute_class_probability(Y);
+        auto node = DecisionTreeClassifier::create_node(best_candidate_var, false, true);
         return node;
     }
 
@@ -249,68 +252,68 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
         );
 
         if (gen_var.split_kind == "numeric") {
-            if (crt_inf_gain > rec_build.best_gain) {
-                rec_build.best_gain = crt_inf_gain;
-                rec_build.best_idx = gen_var.split_idx;
-                rec_build.num_cond = gen_var.num_thresh;
+            if (crt_inf_gain > best_candidate_var.best_gain) {
+                best_candidate_var.best_gain = crt_inf_gain;
+                best_candidate_var.best_idx = gen_var.split_idx;
+                best_candidate_var.num_cond = gen_var.num_thresh;
 
                 // Left and Right decision matrices
-                rec_build.left_x_mat = gen_var.left_x_mat;
-                rec_build.right_x_mat = gen_var.right_x_mat;
+                best_candidate_var.left_x_mat = gen_var.left_x_mat;
+                best_candidate_var.right_x_mat = gen_var.right_x_mat;
 
                 // Left and Right decision split vectors
-                rec_build.left_y_vec = gen_var.left_y_vec;
-                rec_build.right_y_vec = gen_var.right_y_vec;
+                best_candidate_var.left_y_vec = gen_var.left_y_vec;
+                best_candidate_var.right_y_vec = gen_var.right_y_vec;
             }
         } 
 
         if (gen_var.split_kind == "categorical") {
-            if (crt_inf_gain > rec_build.best_gain) {
-                rec_build.best_gain = crt_inf_gain;
-                rec_build.best_idx = gen_var.split_idx;
-                rec_build.cat_cond = gen_var.cat_thresh;
+            if (crt_inf_gain > best_candidate_var.best_gain) {
+                best_candidate_var.best_gain = crt_inf_gain;
+                best_candidate_var.best_idx = gen_var.split_idx;
+                best_candidate_var.cat_cond = gen_var.cat_thresh;
 
                 // Left and Right decision matrices
-                rec_build.left_x_mat = gen_var.left_x_mat;
-                rec_build.right_x_mat = gen_var.right_x_mat;
+                best_candidate_var.left_x_mat = gen_var.left_x_mat;
+                best_candidate_var.right_x_mat = gen_var.right_x_mat;
 
                 // Left and Right decision vectors
-                rec_build.left_y_vec = gen_var.left_y_vec;
-                rec_build.right_y_vec = gen_var.right_y_vec;
+                best_candidate_var.left_y_vec = gen_var.left_y_vec;
+                best_candidate_var.right_y_vec = gen_var.right_y_vec;
             }
         } 
     }
 
-    if (rec_build.best_gain < min_information_gain) {
+    if (best_candidate_var.best_gain < min_information_gain) {
         cout << "[*] Stopping training! Minimum Information Gain hit.";
-        auto leaf_node = DecisionTreeClassifier::create_node(rec_build, false, true);
+        best_candidate_var.computed_probs = DecisionTreeClassifier::compute_class_probability(Y);
+        auto leaf_node = DecisionTreeClassifier::create_node(best_candidate_var, false, true);
         return leaf_node;
     }
 
-    if (rec_build.left_y_vec.n_rows != 0 && rec_build.right_y_vec.n_rows != 0) {
-        if (rec_build.left_y_vec.n_rows < min_samples_leaf || 
-            rec_build.right_y_vec.n_rows < min_samples_leaf
+    if (best_candidate_var.left_y_vec.n_rows != 0 && best_candidate_var.right_y_vec.n_rows != 0) {
+        if (best_candidate_var.left_y_vec.n_rows < min_samples_leaf || 
+            best_candidate_var.right_y_vec.n_rows < min_samples_leaf
         ) {
             cout << "[*] Stopping training! Minimum samples per leaf hit.";
-            auto leaf_node = DecisionTreeClassifier::create_node(rec_build, false, true);
+            best_candidate_var.computed_probs = DecisionTreeClassifier::compute_class_probability(Y);
+            auto leaf_node = DecisionTreeClassifier::create_node(best_candidate_var, false, true);
             return leaf_node;
         }
     }
 
-    auto decision_node = DecisionTreeClassifier::create_node(rec_build, true, false);
+    auto decision_node = DecisionTreeClassifier::create_node(best_candidate_var, true, false);
 
-    // Left branch of the tree
     decision_node->left_branch = DecisionTreeClassifier::build_decision_tree(
-        rec_build.left_x_mat,
-        rec_build.left_y_vec,
-        ++recursive_max_depth
+        best_candidate_var.left_x_mat,
+        best_candidate_var.left_y_vec,
+        recursive_max_depth + 1
     );
 
-    // Right branch of the tree
     decision_node->right_branch = DecisionTreeClassifier::build_decision_tree(
-        rec_build.right_x_mat,
-        rec_build.right_y_vec,
-        ++recursive_max_depth
+        best_candidate_var.right_x_mat,
+        best_candidate_var.right_y_vec,
+        recursive_max_depth + 1
     );
 
     return decision_node;
