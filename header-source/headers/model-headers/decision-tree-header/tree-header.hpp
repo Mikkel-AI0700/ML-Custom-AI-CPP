@@ -9,24 +9,14 @@
 #include "classifier_mixin.hpp"
 #include "complex_datatypes.hpp"
 
-struct CreateNodeParameters {
-    std::optional<float>                        num_feats;
-    std::optional<std::variant<int, float>>     cat_feats;
-    std::vector<float>*                         class_probs;
-    float                                       info_gain;
-    int                                         split_idx;
-    bool                                        make_decision_node;
-    bool                                        make_leaf_node;
-};
-
-struct RecursiveTreeBuilder {
+struct BestCandidateSplit {
     arma::mat                                  left_x_mat;
     arma::mat                                  right_x_mat;
     arma::vec                                  left_y_vec;
     arma::vec                                  right_y_vec;
-    std::vector<float>                         computed_probs;
+    arma::vec                                  computed_probs;
     std::optional<float>                       num_cond;
-    float                                      best_gain;
+    float                                      best_gain = 0.0f;
     int                                        best_idx;
     std::optional<std::variant<int, float>>    cat_cond;
 };
@@ -34,8 +24,6 @@ struct RecursiveTreeBuilder {
 struct SplitYieldParameters {
     arma::mat                                  x_feat_mat;
     arma::vec                                  y_target_vec;
-    std::vector<int>                           num_cols;
-    std::vector<int>                           cat_cols;
 };
 
 struct GeneratorVariables {
@@ -51,7 +39,7 @@ struct GeneratorVariables {
 
 struct Node {
     // Leaf Node probabilities
-    std::vector<float>                         computed_probabilities;
+    arma::vec                                  computed_probabilities;
 
     // Decision Node Data
     int                                        split_index;
@@ -76,8 +64,8 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         int min_samples_leaf;
         int min_samples_split;
         float min_information_gain;
-        IntegerCategoricalList numerical_features;
-        IntegerCategoricalList categorical_features;
+        std::vector<int> numerical_features;
+        std::vector<int> categorical_features;
 
         DecisionTreeClassifier(
             std::string split_metric = "gini",
@@ -87,8 +75,8 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
             int min_samples_leaf = 50,
             int min_samples_split = 30,
             float min_information_gain = 1e-5f,
-            IntegerCategoricalList numerical_features,
-            IntegerCategoricalList categorical_features
+            std::vector<int> numerical_features,
+            std::vector<int> categorical_features
         ): 
             split_metric(split_metric),
             max_depth(max_depth),
@@ -134,7 +122,7 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
             GeneratorVariables& generator_parameters
         );
         std::unique_ptr<Node> create_node (
-            RecursiveTreeBuilder& rec_tree_build,
+            BestCandidateSplit& rec_tree_build,
             bool create_decision_node,
             bool create_leaf_node
         );
