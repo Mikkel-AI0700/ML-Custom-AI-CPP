@@ -110,7 +110,7 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
         }
 
         for (int index = 0; index < math_length; index++) {
-            generated_number = rand() % math_length;
+            generated_number = rand() % feature_list.size();
             auto math_mem_end = std::find(
                 selected_features.begin(),
                 selected_features.end(),
@@ -330,7 +330,8 @@ float DecisionTreeClassifier::traverse_tree_prediction (
     }
 
     if (node->num_condition.has_value()) {
-        if (element.at(node->split_index) > node->num_condition) {
+        float extracted_num_cond = node->num_condition.value();
+        if (element.at(node->split_index) > extracted_num_cond) {
             return DecisionTreeClassifier::traverse_tree_prediction(
                 element,
                 node->left_branch
@@ -344,8 +345,8 @@ float DecisionTreeClassifier::traverse_tree_prediction (
     }
 
     if (node->cat_condition.has_value()) {
-        float float_cat_cond = std::get<float>(node->cat_condition.value());
-        if (element.at(node->split_index) == float_cat_cond) {
+        float extracted_cat_cond = node->cat_condition.value();
+        if (element.at(node->split_index) == extracted_cat_cond) {
             return DecisionTreeClassifier::traverse_tree_prediction(
                 element,
                 node->left_branch
