@@ -1,6 +1,4 @@
-#ifndef COMPLEX_DATATYPES_HPP
-#define COMPLEX_DATATYPES_HPP
-
+#pragma once
 #include <vector>
 #include <variant>
 #include <map>
@@ -22,19 +20,5 @@ using SIDual = std::variant<std::string, int>;
 
 using IntegerCategoricalList = std::variant<
     std::vector<int>,
-    std::vector<std::string>
+    std::vector<float>
 >;
-
-using YieldedInformation = std::vector<
-    std::variant<
-        std::string,
-        int,
-        std::variant<int, float, std::string>,
-        arma::mat,
-        arma::vec,
-        arma::mat,
-        arma::vec
-    >
->;
-
-#endif
