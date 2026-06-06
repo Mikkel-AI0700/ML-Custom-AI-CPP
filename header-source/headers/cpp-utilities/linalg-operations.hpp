@@ -1,6 +1,4 @@
-#ifndef LIN_ALG_OPERATIONS
-#define LIN_ALG_OPERATIONS
-
+#pragma once
 #include <vector>
 #include <armadillo>
 
@@ -10,5 +8,3 @@ struct UniqueFunctionReturns {
 };
 
 UniqueFunctionReturns unique (arma::mat& Y, bool return_counts);
-
-#endif
