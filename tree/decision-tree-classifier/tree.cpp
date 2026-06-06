@@ -101,9 +101,9 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
         int math_length;
         int generated_number;
 
-        if (std::get<string>(max_features) == "sqrt") {
+        if (std::get<string>(max_feature) == "sqrt") {
             math_length = abs(sqrt(feature_list.size()));
-        } else if (std::get<string>(max_features) == "log2") {
+        } else if (std::get<string>(max_feature) == "log2") {
             math_length = abs(log2(feature_list.size()));
         } else {
             return feature_list;
