@@ -1,6 +1,4 @@
-#ifndef CLASSIFIER_MIXIN_HPP
-#define CLASSIFIER_MIXIN_HPP
-
+#pragma once
 #include <any>
 #include <map>
 #include <string>
@@ -9,6 +7,3 @@
 class ClassifierMixin {
     float score (arma::vec& predictions, arma::vec& test_y);
 };
-
-#endif
-

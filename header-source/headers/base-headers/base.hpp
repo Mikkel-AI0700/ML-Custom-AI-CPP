@@ -1,6 +1,4 @@
-#ifndef BASE_ESTIMATOR_HPP
-#define BASE_ESTIMATOR_HPP
-
+#pragma once
 #include <string>
 #include <filesystem>
 #include <armadillo>
@@ -21,6 +19,3 @@ class BaseEstimator {
         virtual void save_model (std::string model_save_name, std::filesystem::path save_path);
         virtual void load_model (std::filesystem::path load_path);
 };
-
-#endif
-
