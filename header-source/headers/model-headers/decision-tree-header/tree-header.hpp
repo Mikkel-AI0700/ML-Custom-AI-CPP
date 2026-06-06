@@ -35,7 +35,7 @@ struct GeneratorVariables {
     arma::vec                                  right_y_vec;
     std::string                                split_kind;
     float                                      num_thresh;
-    int                                        cat_thresh;
+    float                                      cat_thresh;
     int                                        split_idx;
 };
 
@@ -46,7 +46,7 @@ struct Node {
     // Decision Node Data
     int                                        split_index;
     std::optional<float>                       num_condition;
-    std::optional<std::variant<int, float>>    cat_condition;
+    std::optional<float>                       cat_condition;
 
     // Boolean flags for checking if Leaf or Decision
     bool                                       is_leaf_node = false;
