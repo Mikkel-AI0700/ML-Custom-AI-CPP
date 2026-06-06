@@ -1,6 +1,4 @@
-#ifndef CPP_LOADER_UTILITIES_HPP
-#define CPP_LOADER_UTILITIES_HPP
-
+#pragma once
 #include <filesystem>
 #include <armadillo>
 #include "loader.hpp"
@@ -28,6 +26,3 @@ class DatasetOperations {
             arma::colvec model_predictions
         );
 };
-
-#endif
-
