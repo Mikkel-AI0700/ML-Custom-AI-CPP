@@ -77,8 +77,8 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
             int min_samples_leaf = 50,
             int min_samples_split = 30,
             float min_information_gain = 1e-5f,
-            std::vector<int> numerical_features,
-            std::vector<int> categorical_features
+            std::vector<int> numerical_features = {},
+            std::vector<int> categorical_features = {}
         ): 
             split_metric(split_metric),
             max_depth(max_depth),
