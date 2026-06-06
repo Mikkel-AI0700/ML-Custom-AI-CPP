@@ -8,5 +8,3 @@ struct UniqueFunctionReturns {
 };
 
 UniqueFunctionReturns unique (arma::mat& Y, bool return_counts);
-
-#endif
