@@ -36,7 +36,7 @@ vec DecisionTreeClassifier::compute_class_probability (vec& Y) {
         prob_vec = arma::zeros(unique_classes.size());
 
         for (int i = 0; i < unq_ret.labels.size(); i++) {
-            classes_to_index.insert({i, unq_ret.labels[i]});
+            classes_to_index.insert({unq_ret.labels[i], i});
         }
     } else {
         prob_vec = arma::zeros(unique_classes.size());
@@ -109,7 +109,7 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
             return feature_list;
         }
 
-        for (int index = 0; index < math_length; index++) {
+        while (selected_features.size() < math_length) {
             generated_number = rand() % feature_list.size();
             auto math_mem_end = std::find(
                 selected_features.begin(),
@@ -145,10 +145,10 @@ generator<GeneratorVariables&> DecisionTreeClassifier::split_yield (
 
         for (int inner_index = 0; inner_index < midpoints.n_elem; inner_index++) {
             uvec left_idx = arma::find(
-                yield_params.x_feat_mat.col(index) > midpoints[inner_index]
+                yield_params.x_feat_mat.col(numerical_features[index]) > midpoints[inner_index]
             );
             uvec right_idx = arma::find(
-                yield_params.x_feat_mat.col(index) <= midpoints[inner_index]
+                yield_params.x_feat_mat.col(numerical_features[index]) <= midpoints[inner_index]
             );
 
             gen_var.split_kind = "numeric";
@@ -169,10 +169,10 @@ generator<GeneratorVariables&> DecisionTreeClassifier::split_yield (
         
         for (int inner_index = 0; inner_index < subview_unq.labels.size(); inner_index++) {
             uvec left_idx = arma::find(
-                yield_params.x_feat_mat.col(index) == subview_unq.labels[inner_index]
+                yield_params.x_feat_mat.col(categorical_features[index]) == subview_unq.labels[inner_index]
             );
             uvec right_idx = arma::find(
-                yield_params.x_feat_mat.col(index) != subview_unq.labels[inner_index]
+                yield_params.x_feat_mat.col(categorical_features[index]) != subview_unq.labels[inner_index]
             );
 
             gen_var.split_kind = "categorical";
@@ -318,15 +318,25 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
     return decision_node;
 }
 
-float DecisionTreeClassifier::traverse_tree_prediction (
+int DecisionTreeClassifier::traverse_tree_prediction (
     mat element, 
     const unique_ptr<Node>& node
 ) {
     if (node->is_leaf_node) {
-        return *std::max_element(
+        vector<double> computed_probabilities = arma::conv_to<vec>::from(
+            node->computed_probabilities
+        );
+
+        auto max_elem_ptr = std::max_element(
             node->computed_probabilities.begin(),
             node->computed_probabilities.end()
         );
+
+        return std::distance(
+            node->computed_probabilities.begin(),
+            max_elem_ptr
+        );
+
     }
 
     if (node->num_condition.has_value()) {
