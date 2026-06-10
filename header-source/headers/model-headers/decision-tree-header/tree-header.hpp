@@ -20,7 +20,7 @@ struct BestCandidateSplit {
     std::optional<float>                       num_cond;
     float                                      best_gain = 0.0f;
     int                                        best_idx;
-    std::optional<std::variant<int, float>>    cat_cond;
+    std::optional<float>                       cat_cond;
 };
 
 struct SplitYieldParameters {
@@ -34,8 +34,8 @@ struct GeneratorVariables {
     arma::vec                                  left_y_vec;
     arma::vec                                  right_y_vec;
     std::string                                split_kind;
-    float                                      num_thresh;
-    float                                      cat_thresh;
+    std::optional<float>                       num_thresh;
+    std::optional<float>                       cat_thresh;
     int                                        split_idx;
 };
 
@@ -133,7 +133,7 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
             arma::vec& Y, 
             int recursive_max_depth
         );
-        float traverse_tree_prediction (
+        int traverse_tree_prediction (
             arma::mat element, 
             const std::unique_ptr<Node>& node
         );
