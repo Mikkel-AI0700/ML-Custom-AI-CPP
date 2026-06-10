@@ -126,6 +126,7 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
         return selected_features;
     } catch (const bad_variant_access& error) {
         cout << "Error: " << error.what();
+        return;
     }
 }
 
