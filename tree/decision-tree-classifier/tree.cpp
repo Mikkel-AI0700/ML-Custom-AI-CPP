@@ -62,7 +62,7 @@ float DecisionTreeClassifier::compute_entropy (vec& Y) {
     vec prob_vec = DecisionTreeClassifier::compute_class_probability(Y);
     uvec pos_idx = arma::find(prob_vec > 0.0);
     vec pos_prob = prob_vec.elem(pos_idx);
-    float ent_val = -(arma::sum(pos_prob * arma::log2(pos_prob)));
+    float ent_val = -(arma::sum(pos_prob % arma::log2(pos_prob)));
     return ent_val;
 }
 
@@ -117,7 +117,9 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
                 generated_number
             );
             if (math_mem_end == selected_features.end()) {
-                selected_features.push_back(generated_number);
+                selected_features.push_back(
+                    feature_list[generated_number]
+                );
             } else {
                 continue;
             }
