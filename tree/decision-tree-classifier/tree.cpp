@@ -45,7 +45,7 @@ vec DecisionTreeClassifier::compute_class_probability (vec& Y) {
     for (int i = 0; i < unq_ret.labels.size(); i++) {
         if (classes_to_index.contains(unq_ret.labels[i])) {
             int index = classes_to_index.at(unq_ret.labels[i]);
-            prob_vec.at(index) = unq_ret.label_counts[i] / Y.n_rows;
+            prob_vec.at(index) = static_cast<float>(unq_ret.label_counts[i]) / Y.n_rows;
         }
     }
 
@@ -79,8 +79,8 @@ float DecisionTreeClassifier::compute_information_gain (
     float left_subset_imp = DecisionTreeClassifier::determine_impurity_metric(left_subset);
     float right_subset_imp = DecisionTreeClassifier::determine_impurity_metric(right_subset);
 
-    float left_subset_weighted = left_subset.n_rows / Y.n_rows * left_subset_imp;
-    float right_subset_weighted = right_subset.n_rows / Y.n_rows * right_subset_imp;
+    float left_subset_weighted = (static_cast<float>(left_subset.n_rows) / Y.n_rows) * left_subset_imp;
+    float right_subset_weighted = (static_cast<float>(right_subset.n_rows) / Y.n_rows) * right_subset_imp;
 
     return main_data_imp - (left_subset_weighted + right_subset_weighted);
 }
@@ -137,7 +137,9 @@ generator<GeneratorVariables&> DecisionTreeClassifier::split_yield (
     GeneratorVariables &gen_var
 ) {
     for (int index = 0; index < numerical_features.size(); index++) {
-        vec column_subview = yield_params.x_feat_mat.col(index);
+        vec column_subview = yield_params.x_feat_mat.col(
+            numerical_features[index]
+        );
 
         UniqueFunctionReturns subview_unq = unique(column_subview, false);
         vec labels = arma::conv_to<vec>::from(subview_unq.labels);
@@ -167,7 +169,9 @@ generator<GeneratorVariables&> DecisionTreeClassifier::split_yield (
     }
 
     for (int index = 0; index < categorical_features.size(); index++) {
-        vec column_subview = yield_params.x_feat_mat.col(index);
+        vec column_subview = yield_params.x_feat_mat.col(
+            categorical_features[index]
+        );
         UniqueFunctionReturns subview_unq = unique(column_subview, false);
         
         for (int inner_index = 0; inner_index < subview_unq.labels.size(); inner_index++) {
