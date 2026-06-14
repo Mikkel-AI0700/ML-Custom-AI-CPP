@@ -20,6 +20,7 @@ using std::optional;
 using std::generator;
 using std::unique_ptr;
 using std::bad_variant_access;
+using std::runtime_error;
 
 // Armadillo library
 using arma::mat;
@@ -101,14 +102,19 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
         int math_length;
         int generated_number;
 
-        if (std::get<string>(max_feature) == "sqrt") {
-            math_length = abs(sqrt(feature_list.size()));
-        } else if (std::get<string>(max_feature) == "log2") {
-            math_length = abs(log2(feature_list.size()));
+        if (std::holds_alternative<string>(max_feature)) {
+            if (std::get<string>(max_feature) == "sqrt") {
+                math_length = abs(sqrt(feature_list.size()));
+            }
+
+            if (std::get<string>(max_feature) == "log2") {
+                math_length = abs(log2(feature_list.size()));
+            }
         } else {
             return feature_list;
         }
 
+        // Manual random feature selection
         while (selected_features.size() < math_length) {
             generated_number = rand() % feature_list.size();
             auto math_mem_end = std::find(
@@ -297,7 +303,7 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
         return leaf_node;
     }
 
-    if (best_candidate_var.left_y_vec.n_rows != 0 && best_candidate_var.right_y_vec.n_rows != 0) {
+    if (best_candidate_var.left_y_vec.n_rows == 0 || best_candidate_var.right_y_vec.n_rows == 0) {
         if (best_candidate_var.left_y_vec.n_rows < min_samples_leaf || 
             best_candidate_var.right_y_vec.n_rows < min_samples_leaf
         ) {
@@ -308,7 +314,11 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
         }
     }
 
-    auto decision_node = DecisionTreeClassifier::create_node(best_candidate_var, true, false);
+    auto decision_node = DecisionTreeClassifier::create_node(
+        best_candidate_var, 
+        true, 
+        false
+    );
 
     decision_node->left_branch = DecisionTreeClassifier::build_decision_tree(
         best_candidate_var.left_x_mat,
@@ -375,6 +385,8 @@ int DecisionTreeClassifier::traverse_tree_prediction (
             );
         }
     }
+
+    throw std::runtime_error("[-] Error: Unexpected corrupted node encountered.");
 }
 
 void DecisionTreeClassifier::fit (mat& X, vec& Y) {
@@ -386,7 +398,7 @@ void DecisionTreeClassifier::fit (mat& X, vec& Y) {
     );
 }
 
-vec DecisionTreeClassifier::predict (mat& Y) {
+vec DecisionTreeClassifier::predict (mat& X) {
     vector<float> predictions;
 
     if (unique_classes.empty()) {
