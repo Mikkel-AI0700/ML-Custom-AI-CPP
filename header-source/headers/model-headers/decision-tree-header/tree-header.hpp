@@ -92,7 +92,7 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         {}
 
         void fit (arma::mat& X, arma::vec& Y) override;
-        arma::vec predict (arma::mat& Y) override;
+        arma::vec predict (arma::mat& X) override;
 
     private:
         std::unique_ptr<Node> root_node;
