@@ -1,6 +1,7 @@
 #pragma once
 #include <filesystem>
 #include <armadillo>
+#include "complex_datatypes.hpp"
 #include "loader.hpp"
 
 struct SavePaths {
