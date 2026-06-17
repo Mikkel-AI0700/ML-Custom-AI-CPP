@@ -101,10 +101,10 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
         if (std::holds_alternative<string>(max_feature)) {
             if (std::get<string>(max_feature) == "sqrt") {
                 math_length = static_cast<int>(sqrt(feature_list.size()));
-            }
-
-            if (std::get<string>(max_feature) == "log2") {
+            } else if (std::get<string>(max_feature) == "log2") {
                 math_length = static_cast<int>(log2(feature_list.size()));
+            } else {
+                throw std::runtime_error("[-] Error: Invalid max_feature string provided.");
             }
         } else {
             return feature_list;
@@ -129,6 +129,9 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
 
         return selected_features;
     } catch (const bad_variant_access& error) {
+        cout << "Error: " << error.what();
+        return {};
+    } catch (const std::runtime_error& error) {
         cout << "Error: " << error.what();
         return {};
     }
