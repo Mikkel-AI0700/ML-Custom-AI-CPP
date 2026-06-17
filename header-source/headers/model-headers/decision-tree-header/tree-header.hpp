@@ -104,10 +104,6 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         // Math functions to compute impurity and randomness
         float compute_impurity (arma::vec& Y);
         float compute_entropy (arma::vec& Y);
-        float compute_log_loss (
-            arma::vec& pred_y,
-            arma::vec& pred_y_prob
-        );
         float compute_information_gain (
             arma::vec& Y,
             arma::vec& left_subset,
