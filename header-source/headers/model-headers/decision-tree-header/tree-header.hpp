@@ -54,7 +54,7 @@ struct Node {
 
     // Unique pointers to the left and right branches
     std::unique_ptr<Node>                      left_branch;
-    std::unique_ptr<Node>                      right_branch; 
+    std::unique_ptr<Node>                      right_branch;
 };
 
 class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
@@ -79,7 +79,7 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
             float min_information_gain = 1e-5f,
             std::vector<int> numerical_features = {},
             std::vector<int> categorical_features = {}
-        ): 
+        ):
             split_metric(split_metric),
             max_depth(max_depth),
             max_feature(max_feature),
@@ -105,12 +105,12 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         float compute_impurity (arma::vec& Y);
         float compute_entropy (arma::vec& Y);
         float compute_log_loss (
-            arma::vec& pred_y, 
+            arma::vec& pred_y,
             arma::vec& pred_y_prob
         );
         float compute_information_gain (
-            arma::vec& Y, 
-            arma::vec& left_subset, 
+            arma::vec& Y,
+            arma::vec& left_subset,
             arma::vec& right_subset
         );
 
@@ -129,12 +129,12 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
             bool create_leaf_node
         );
         std::unique_ptr<Node> build_decision_tree (
-            arma::mat& X, 
-            arma::vec& Y, 
+            arma::mat& X,
+            arma::vec& Y,
             int recursive_max_depth
         );
         int traverse_tree_prediction (
-            arma::mat element, 
+            arma::mat element,
             const std::unique_ptr<Node>& node
         );
 };
