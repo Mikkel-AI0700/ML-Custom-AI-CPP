@@ -31,7 +31,7 @@ vec DecisionTreeClassifier::compute_class_probability (vec& Y) {
     vector<int> labels;
     vector<int> label_counts;
     UniqueFunctionReturns unq_ret = unique(Y, true);
-    
+
     if (unique_classes.empty()) {
         unique_classes = unq_ret.labels;
         prob_vec = arma::zeros(unique_classes.size());
@@ -72,7 +72,7 @@ float DecisionTreeClassifier::compute_log_loss (vec& Y, vec& prob_vec) {
 }
 
 float DecisionTreeClassifier::compute_information_gain (
-    vec& Y, 
+    vec& Y,
     vec& left_subset,
     vec& right_subset
 ) {
@@ -104,11 +104,11 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
 
         if (std::holds_alternative<string>(max_feature)) {
             if (std::get<string>(max_feature) == "sqrt") {
-                math_length = abs(sqrt(feature_list.size()));
+                math_length = static_cast<int>(sqrt(feature_list.size()));
             }
 
             if (std::get<string>(max_feature) == "log2") {
-                math_length = abs(log2(feature_list.size()));
+                math_length = static_cast<int>(log2(feature_list.size()));
             }
         } else {
             return feature_list;
@@ -134,7 +134,7 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
         return selected_features;
     } catch (const bad_variant_access& error) {
         cout << "Error: " << error.what();
-        return;
+        return {};
     }
 }
 
@@ -150,7 +150,7 @@ generator<GeneratorVariables&> DecisionTreeClassifier::split_yield (
         UniqueFunctionReturns subview_unq = unique(column_subview, false);
         vec labels = arma::conv_to<vec>::from(subview_unq.labels);
         vec midpoints = (
-            labels.subvec(0, labels.n_elem - 2) + 
+            labels.subvec(0, labels.n_elem - 2) +
             labels.subvec(1, labels.n_elem - 1)
         ) / 2.0;
 
@@ -179,7 +179,7 @@ generator<GeneratorVariables&> DecisionTreeClassifier::split_yield (
             categorical_features[index]
         );
         UniqueFunctionReturns subview_unq = unique(column_subview, false);
-        
+
         for (int inner_index = 0; inner_index < subview_unq.labels.size(); inner_index++) {
             uvec left_idx = arma::find(
                 yield_params.x_feat_mat.col(categorical_features[index]) == subview_unq.labels[inner_index]
@@ -277,7 +277,7 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
                 best_candidate_var.left_y_vec = gen_var.left_y_vec;
                 best_candidate_var.right_y_vec = gen_var.right_y_vec;
             }
-        } 
+        }
 
         if (gen_var.split_kind == "categorical") {
             if (crt_inf_gain > best_candidate_var.best_gain) {
@@ -293,7 +293,7 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
                 best_candidate_var.left_y_vec = gen_var.left_y_vec;
                 best_candidate_var.right_y_vec = gen_var.right_y_vec;
             }
-        } 
+        }
     }
 
     if (best_candidate_var.best_gain < min_information_gain) {
@@ -304,7 +304,7 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
     }
 
     if (best_candidate_var.left_y_vec.n_rows == 0 || best_candidate_var.right_y_vec.n_rows == 0) {
-        if (best_candidate_var.left_y_vec.n_rows < min_samples_leaf || 
+        if (best_candidate_var.left_y_vec.n_rows < min_samples_leaf ||
             best_candidate_var.right_y_vec.n_rows < min_samples_leaf
         ) {
             cout << "[*] Stopping training! Minimum samples per leaf hit.";
@@ -315,8 +315,8 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
     }
 
     auto decision_node = DecisionTreeClassifier::create_node(
-        best_candidate_var, 
-        true, 
+        best_candidate_var,
+        true,
         false
     );
 
@@ -336,24 +336,24 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
 }
 
 int DecisionTreeClassifier::traverse_tree_prediction (
-    mat element, 
+    mat element,
     const unique_ptr<Node>& node
 ) {
     if (node->is_leaf_node) {
-        vector<double> computed_probabilities = arma::conv_to<vec>::from(
-            node->computed_probabilities
-        );
-
-        auto max_elem_ptr = std::max_element(
+        vector<double> computed_probabilities(
             node->computed_probabilities.begin(),
             node->computed_probabilities.end()
         );
 
-        return std::distance(
-            node->computed_probabilities.begin(),
-            max_elem_ptr
+        auto max_elem_ptr = std::max_element(
+            computed_probabilities.begin(),
+            computed_probabilities.end()
         );
 
+        return std::distance(
+            computed_probabilities.begin(),
+            max_elem_ptr
+        );
     }
 
     if (node->num_condition.has_value()) {
@@ -405,8 +405,8 @@ vec DecisionTreeClassifier::predict (mat& X) {
         cout << "[*] Error: DecisionTreeClassifier has not been fitted yet";
     }
 
-    for (int index = 0; index < Y.n_rows; index++) {
-        mat row = Y.row(index);
+    for (int index = 0; index < X.n_rows; index++) {
+        mat row = X.row(index);
         predictions.push_back(
             DecisionTreeClassifier::traverse_tree_prediction(
                 row,
@@ -421,5 +421,3 @@ vec DecisionTreeClassifier::predict (mat& X) {
 int main () {
 
 }
-
- 
