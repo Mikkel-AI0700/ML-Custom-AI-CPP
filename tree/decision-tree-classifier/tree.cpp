@@ -67,10 +67,6 @@ float DecisionTreeClassifier::compute_entropy (vec& Y) {
     return ent_val;
 }
 
-float DecisionTreeClassifier::compute_log_loss (vec& Y, vec& prob_vec) {
-
-}
-
 float DecisionTreeClassifier::compute_information_gain (
     vec& Y,
     vec& left_subset,
@@ -89,10 +85,10 @@ float DecisionTreeClassifier::compute_information_gain (
 float DecisionTreeClassifier::determine_impurity_metric (vec& Y) {
     if (split_metric == "gini") {
         return DecisionTreeClassifier::compute_impurity(Y);
-    } else if (split_metric == "entropy") {
+    }
+
+    if (split_metric == "entropy") {
         return DecisionTreeClassifier::compute_entropy(Y);
-    } else {
-        //return DecisionTreeClassifier::compute_log_loss();
     }
 }
 
@@ -402,7 +398,7 @@ vec DecisionTreeClassifier::predict (mat& X) {
     vector<float> predictions;
 
     if (unique_classes.empty()) {
-        cout << "[*] Error: DecisionTreeClassifier has not been fitted yet";
+        throw std::runtime_error("[-] Error: Model has not been fitted yet.");
     }
 
     for (int index = 0; index < X.n_rows; index++) {
