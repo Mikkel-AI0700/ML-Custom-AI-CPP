@@ -19,8 +19,9 @@ using std::variant;
 using std::optional;
 using std::generator;
 using std::unique_ptr;
-using std::bad_variant_access;
 using std::runtime_error;
+using std::invalid_argument;
+using std::bad_variant_access;
 
 // Armadillo library
 using arma::mat;
@@ -39,18 +40,20 @@ vec DecisionTreeClassifier::compute_class_probability (vec& Y) {
         for (int i = 0; i < unq_ret.labels.size(); i++) {
             classes_to_index.insert({unq_ret.labels[i], i});
         }
+
+        return {};
     } else {
         prob_vec = arma::zeros(unique_classes.size());
-    }
 
-    for (int i = 0; i < unq_ret.labels.size(); i++) {
-        if (classes_to_index.contains(unq_ret.labels[i])) {
-            int index = classes_to_index.at(unq_ret.labels[i]);
-            prob_vec.at(index) = static_cast<float>(unq_ret.label_counts[i]) / static_cast<float>(Y.n_rows);
+        for (int i = 0; i < unq_ret.labels.size(); i++) {
+            if (classes_to_index.contains(unq_ret.labels[i])) {
+                int index = classes_to_index.at(unq_ret.labels[i]);
+                prob_vec.at(index) = static_cast<float>(unq_ret.label_counts[i]) / static_cast<float>(Y.n_rows);
+            }
         }
+        return prob_vec;
     }
 
-    return prob_vec;
 }
 
 float DecisionTreeClassifier::compute_impurity (vec& Y) {
@@ -85,10 +88,10 @@ float DecisionTreeClassifier::compute_information_gain (
 float DecisionTreeClassifier::determine_impurity_metric (vec& Y) {
     if (split_metric == "gini") {
         return DecisionTreeClassifier::compute_impurity(Y);
-    }
-
-    if (split_metric == "entropy") {
+    } else if (split_metric == "entropy") {
         return DecisionTreeClassifier::compute_entropy(Y);
+    } else {
+        throw invalid_argument("[-] Error: Invalid argument detected.");
     }
 }
 
@@ -237,6 +240,14 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
     SplitYieldParameters splt_yld;
     GeneratorVariables gen_var;
 
+    // Filtering out the numerical and categorical features
+    numerical_features = DecisionTreeClassifier::determine_feature_split_metric(
+        numerical_features
+    );
+    categorical_features = DecisionTreeClassifier::determine_feature_split_metric(
+        categorical_features
+    );
+
     // Explicitly assigning the X and Y matrix and vector
     splt_yld.x_feat_mat = X;
     splt_yld.y_target_vec = Y;
@@ -275,6 +286,7 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
                 // Left and Right decision split vectors
                 best_candidate_var.left_y_vec = gen_var.left_y_vec;
                 best_candidate_var.right_y_vec = gen_var.right_y_vec;
+                best_candidate_var.cat_cond = std::nullopt;
             }
         }
 
@@ -291,6 +303,7 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
                 // Left and Right decision vectors
                 best_candidate_var.left_y_vec = gen_var.left_y_vec;
                 best_candidate_var.right_y_vec = gen_var.right_y_vec;
+                best_candidate_var.num_cond = std::nullopt;
             }
         }
     }
@@ -302,15 +315,14 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
         return leaf_node;
     }
 
-    if (best_candidate_var.left_y_vec.n_rows == 0 || best_candidate_var.right_y_vec.n_rows == 0) {
-        if (best_candidate_var.left_y_vec.n_rows < min_samples_leaf ||
-            best_candidate_var.right_y_vec.n_rows < min_samples_leaf
-        ) {
-            cout << "[*] Stopping training! Minimum samples per leaf hit.";
-            best_candidate_var.computed_probs = DecisionTreeClassifier::compute_class_probability(Y);
-            auto leaf_node = DecisionTreeClassifier::create_node(best_candidate_var, false, true);
-            return leaf_node;
-        }
+    if (best_candidate_var.left_y_vec.n_rows <= min_samples_leaf ||
+        best_candidate_var.right_y_vec.n_rows <= min_samples_leaf
+    ) {
+        cout << "[*] Stopping training! Minimum samples split hit.";
+        best_candidate_var.computed_probs = DecisionTreeClassifier::compute_class_probability(Y);
+        auto leaf_node = DecisionTreeClassifier::create_node(best_candidate_var, false, true);
+        return leaf_node;
+
     }
 
     auto decision_node = DecisionTreeClassifier::create_node(
@@ -390,6 +402,14 @@ int DecisionTreeClassifier::traverse_tree_prediction (
 
 void DecisionTreeClassifier::fit (mat& X, vec& Y) {
     int recursive_max_depth = 1;
+
+    // To prevent overlap of old and new labels
+    unique_classes.clear();
+    classes_to_index.clear();
+
+    // Initialize unique_classes
+    DecisionTreeClassifier::compute_class_probability(Y);
+    
     root_node = DecisionTreeClassifier::build_decision_tree(
         X,
         Y,
@@ -406,12 +426,11 @@ vec DecisionTreeClassifier::predict (mat& X) {
 
     for (int index = 0; index < X.n_rows; index++) {
         mat row = X.row(index);
-        predictions.push_back(
-            DecisionTreeClassifier::traverse_tree_prediction(
-                row,
-                root_node
-            )
+        int pred_index = DecisionTreeClassifier::traverse_tree_prediction(
+            row,
+            root_node
         );
+        predictions.push_back(static_cast<float>(unique_classes.at(pred_index)));
     }
 
     return arma::conv_to<vec>::from(predictions);
