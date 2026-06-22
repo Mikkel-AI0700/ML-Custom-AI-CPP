@@ -8,7 +8,8 @@
 #include "base.hpp"
 #include "classifier_mixin.hpp"
 #include "loader.hpp"
-#include "complex_datatypes.hpp"
+#include "dataset_types.hpp"
+#include "model_types.hpp"
 
 class LinearRegression: public BaseEstimator, public ClassifierMixin {
     public:

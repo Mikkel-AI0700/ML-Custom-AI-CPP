@@ -9,7 +9,8 @@
 #include <armadillo>
 #include "base.hpp"
 #include "classifier_mixin.hpp"
-#include "complex_datatypes.hpp"
+#include "dataset_types.hpp"
+#include "model_types.hpp"
 
 struct BestCandidateSplit {
     arma::mat                                  left_x_mat;

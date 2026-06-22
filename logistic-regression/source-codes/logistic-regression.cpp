@@ -3,7 +3,8 @@
 #include "base-headers/base.hpp"
 #include "base-headers/classifier_mixin.hpp"
 #include "cpp-utilities/loader.hpp"
-#include "complex-datatypes/complex_datatypes.hpp"
+#include "complex-datatypes/dataset_types.hpp"
+#include "complex-datatypes/model_types.hpp"
 
 class LogisticRegression: public BaseEstimator, public ClassifierMixin {
     public:
