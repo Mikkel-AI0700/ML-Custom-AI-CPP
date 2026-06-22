@@ -29,13 +29,11 @@ struct SplitYieldParameters {
 };
 
 struct GeneratorVariables {
-    arma::mat                                  left_x_mat;
-    arma::mat                                  right_x_mat;
-    arma::vec                                  left_y_vec;
-    arma::vec                                  right_y_vec;
+    arma::uvec                                 left_subset_indices;
+    arma::uvec                                 right_subset_indices;
     std::string                                split_kind;
-    std::optional<float>                       num_thresh;
-    std::optional<float>                       cat_thresh;
+    std::optional<float>                       num_cond;
+    std::optional<float>                       cat_cond;
     int                                        split_idx;
 };
 
@@ -115,7 +113,7 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         std::vector<int> determine_feature_split_metric (
             std::vector<int> feature_list
         );
-        std::generator<GeneratorVariables&> split_yield (
+        std::generator<GeneratorVariables> split_yield (
             SplitYieldParameters& yield_parameters,
             GeneratorVariables& generator_parameters
         );

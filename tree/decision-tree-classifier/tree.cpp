@@ -26,6 +26,7 @@ using std::bad_variant_access;
 // Armadillo library
 using arma::mat;
 using arma::vec;
+using arma::ivec;
 using arma::uvec;
 
 vec DecisionTreeClassifier::compute_class_probability (vec& Y) {
@@ -40,8 +41,6 @@ vec DecisionTreeClassifier::compute_class_probability (vec& Y) {
         for (int i = 0; i < unq_ret.labels.size(); i++) {
             classes_to_index.insert({unq_ret.labels[i], i});
         }
-
-        return {};
     } else {
         prob_vec = arma::zeros(unique_classes.size());
 
@@ -140,7 +139,7 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
     }
 }
 
-generator<GeneratorVariables&> DecisionTreeClassifier::split_yield (
+generator<GeneratorVariables> DecisionTreeClassifier::split_yield (
     SplitYieldParameters &yield_params,
     GeneratorVariables &gen_var
 ) {
@@ -157,20 +156,16 @@ generator<GeneratorVariables&> DecisionTreeClassifier::split_yield (
         ) / 2.0;
 
         for (int inner_index = 0; inner_index < midpoints.n_elem; inner_index++) {
-            uvec left_idx = arma::find(
-                yield_params.x_feat_mat.col(numerical_features[index]) > midpoints[inner_index]
+            gen_var.left_subset_indices = arma::find(
+                column_subview > midpoints[inner_index]
             );
-            uvec right_idx = arma::find(
-                yield_params.x_feat_mat.col(numerical_features[index]) <= midpoints[inner_index]
+            gen_var.right_subset_indices = arma::find(
+                column_subview <= midpoints[inner_index]
             );
 
             gen_var.split_kind = "numeric";
             gen_var.split_idx = numerical_features[index];
-            gen_var.num_thresh = midpoints[inner_index];
-            gen_var.left_x_mat = yield_params.x_feat_mat.rows(left_idx);
-            gen_var.left_y_vec = yield_params.y_target_vec.rows(left_idx);
-            gen_var.right_x_mat = yield_params.x_feat_mat.rows(right_idx);
-            gen_var.right_y_vec = yield_params.y_target_vec.rows(right_idx);
+            gen_var.num_cond = midpoints[inner_index];
 
             co_yield gen_var;
         }
@@ -183,20 +178,16 @@ generator<GeneratorVariables&> DecisionTreeClassifier::split_yield (
         UniqueFunctionReturns subview_unq = unique(column_subview, false);
 
         for (int inner_index = 0; inner_index < subview_unq.labels.size(); inner_index++) {
-            uvec left_idx = arma::find(
-                yield_params.x_feat_mat.col(categorical_features[index]) == subview_unq.labels[inner_index]
+            gen_var.left_subset_indices = arma::find(
+                column_subview == subview_unq.labels[inner_index]
             );
-            uvec right_idx = arma::find(
-                yield_params.x_feat_mat.col(categorical_features[index]) != subview_unq.labels[inner_index]
+            gen_var.right_subset_indices = arma::find(
+                column_subview != subview_unq.labels[inner_index]
             );
 
             gen_var.split_kind = "categorical";
             gen_var.split_idx = categorical_features[index];
-            gen_var.cat_thresh = subview_unq.labels[inner_index];
-            gen_var.left_x_mat = yield_params.x_feat_mat.rows(left_idx);
-            gen_var.left_y_vec = yield_params.y_target_vec.rows(left_idx);
-            gen_var.right_x_mat = yield_params.x_feat_mat.rows(right_idx);
-            gen_var.right_y_vec = yield_params.y_target_vec.rows(right_idx);
+            gen_var.cat_cond = subview_unq.labels[inner_index];
 
             co_yield gen_var;
         }
@@ -266,26 +257,34 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
         return node;
     }
 
-    for (GeneratorVariables& gen_var : DecisionTreeClassifier::split_yield(splt_yld, gen_var)) {
+    for (GeneratorVariables gen_var : DecisionTreeClassifier::split_yield(splt_yld, gen_var)) {
+        // Left matrix and vector "subviews"
+        mat left_mat_subview = X.rows(gen_var.left_subset_indices);
+        vec left_vec_subview = Y.rows(gen_var.left_subset_indices);
+
+        // Right matrix and vector "subviews"
+        mat right_mat_subview = X.rows(gen_var.right_subset_indices);
+        vec right_vec_subview = Y.rows(gen_var.right_subset_indices);
+
         float crt_inf_gain = DecisionTreeClassifier::compute_information_gain(
             Y,
-            gen_var.left_y_vec,
-            gen_var.right_y_vec
+            left_vec_subview,
+            right_vec_subview
         );
 
         if (gen_var.split_kind == "numeric") {
             if (crt_inf_gain > best_candidate_var.best_gain) {
                 best_candidate_var.best_gain = crt_inf_gain;
                 best_candidate_var.best_idx = gen_var.split_idx;
-                best_candidate_var.num_cond = gen_var.num_thresh;
+                best_candidate_var.num_cond = gen_var.num_cond;
 
                 // Left and Right decision matrices
-                best_candidate_var.left_x_mat = gen_var.left_x_mat;
-                best_candidate_var.right_x_mat = gen_var.right_x_mat;
+                best_candidate_var.left_x_mat = left_mat_subview;
+                best_candidate_var.right_x_mat = right_mat_subview;
 
                 // Left and Right decision split vectors
-                best_candidate_var.left_y_vec = gen_var.left_y_vec;
-                best_candidate_var.right_y_vec = gen_var.right_y_vec;
+                best_candidate_var.left_y_vec = left_vec_subview;
+                best_candidate_var.right_y_vec = right_vec_subview;
                 best_candidate_var.cat_cond = std::nullopt;
             }
         }
@@ -294,15 +293,15 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
             if (crt_inf_gain > best_candidate_var.best_gain) {
                 best_candidate_var.best_gain = crt_inf_gain;
                 best_candidate_var.best_idx = gen_var.split_idx;
-                best_candidate_var.cat_cond = gen_var.cat_thresh;
+                best_candidate_var.cat_cond = gen_var.cat_cond;
 
                 // Left and Right decision matrices
-                best_candidate_var.left_x_mat = gen_var.left_x_mat;
-                best_candidate_var.right_x_mat = gen_var.right_x_mat;
+                best_candidate_var.left_x_mat = left_mat_subview;
+                best_candidate_var.right_x_mat = right_mat_subview;
 
-                // Left and Right decision vectors
-                best_candidate_var.left_y_vec = gen_var.left_y_vec;
-                best_candidate_var.right_y_vec = gen_var.right_y_vec;
+                // Left and Right decision split vectors
+                best_candidate_var.left_y_vec = left_vec_subview;
+                best_candidate_var.right_y_vec = right_vec_subview;
                 best_candidate_var.num_cond = std::nullopt;
             }
         }
