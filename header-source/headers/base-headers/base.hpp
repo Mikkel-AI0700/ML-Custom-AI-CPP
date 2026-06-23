@@ -2,7 +2,7 @@
 #include <string>
 #include <filesystem>
 #include <armadillo>
-#include "complex_datatypes.hpp"
+#include "model_types.hpp"
 
 class BaseEstimator {
     public:
