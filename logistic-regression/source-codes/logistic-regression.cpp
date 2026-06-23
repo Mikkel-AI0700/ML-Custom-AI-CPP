@@ -6,6 +6,9 @@
 #include "complex-datatypes/dataset_types.hpp"
 #include "complex-datatypes/model_types.hpp"
 
+using arma::vec;
+using arma::mat;
+
 class LogisticRegression: public BaseEstimator, public ClassifierMixin {
     public:
         arma::vec weights;
@@ -39,30 +42,30 @@ LogisticRegression::LogisticRegression (int epochs, float learning_rate, bool fi
     };
 };
 
-void LogisticRegression::initialize_weights_bias (arma::mat& train_x) {
-    weights = arma::zeros<arma::vec>(train_x.n_cols);
+void LogisticRegression::initialize_weights_bias (mat& train_x) {
+    weights = arma::zeros<vec>(train_x.n_cols);
 
     if (fit_intercept) {
         bias = 0.0;
     }
 }
 
-arma::vec LogisticRegression::sigmoid (arma::vec& logits) {
-    arma::vec sigmoid_predictions = 1.0 / (1.0 + arma::exp(-logits));
+vec LogisticRegression::sigmoid (vec& logits) {
+    vec sigmoid_predictions = 1.0 / (1.0 + arma::exp(-logits));
     return sigmoid_predictions;
 }
 
-arma::vec LogisticRegression::compute_weights_gradients (arma::mat& train_x, arma::vec& train_y, arma::vec& predictions) {
-    arma::vec computed_gradients = (1.0 / static_cast<double>(train_x.n_rows)) * (train_x.t() * (predictions - train_y));
+vec LogisticRegression::compute_weights_gradients (mat& train_x, vec& train_y, vec& predictions) {
+    vec computed_gradients = (1.0 / static_cast<double>(train_x.n_rows)) * (train_x.t() * (predictions - train_y));
     return computed_gradients;
 }
 
-double LogisticRegression::compute_bias_gradients (arma::vec& train_y, arma::vec& predictions) {
+double LogisticRegression::compute_bias_gradients (vec& train_y, vec& predictions) {
     double computed_bias = (1.0 / static_cast<double>(train_y.n_rows)) * arma::accu(predictions - train_y);
     return computed_bias;
 }
 
-void LogisticRegression::update_weights (arma::vec& computed_weights_gradients) {
+void LogisticRegression::update_weights (vec& computed_weights_gradients) {
     weights = weights - learning_rate * computed_weights_gradients;
 }
 
@@ -70,7 +73,7 @@ void LogisticRegression::update_bias (double computed_bias_gradient) {
     bias = bias - learning_rate * computed_bias_gradient;
 }
 
-void LogisticRegression::fit (arma::mat& train_x, arma::vec& train_y) {
+void LogisticRegression::fit (mat& train_x, vec& train_y) {
     LogisticRegression::initialize_weights_bias(train_x);
 
     for (int index = 0; index < epochs; index++) {
@@ -78,19 +81,19 @@ void LogisticRegression::fit (arma::mat& train_x, arma::vec& train_y) {
         std::cout << "[+] Weights: " << weights.t() << std::endl;
         std::cout << "[+] Bias: " << bias << std::endl;
 
-        arma::vec predictions = (train_x * weights) + bias;
-        arma::vec sigmoided = LogisticRegression::sigmoid(predictions);
+        vec predictions = (train_x * weights) + bias;
+        vec sigmoided = LogisticRegression::sigmoid(predictions);
 
-        arma::vec computed_weights = LogisticRegression::compute_weights_gradients(train_x, train_y, sigmoided);
+        vec computed_weights = LogisticRegression::compute_weights_gradients(train_x, train_y, sigmoided);
         double computed_bias = LogisticRegression::compute_bias_gradients(train_y, sigmoided);
         LogisticRegression::update_weights(computed_weights);
         LogisticRegression::update_bias(computed_bias);
     }
 }
 
-arma::vec LogisticRegression::predict (arma::mat& test_x) {
-    arma::vec logit_predictions = (test_x * weights) + bias;
-    arma::vec sigmoid_predictions = LogisticRegression::sigmoid(logit_predictions);
+vec LogisticRegression::predict (mat& test_x) {
+    vec logit_predictions = (test_x * weights) + bias;
+    vec sigmoid_predictions = LogisticRegression::sigmoid(logit_predictions);
     return sigmoid_predictions;
 }
 
@@ -111,12 +114,12 @@ int main (int argc, char* argv[]) {
     );
 
     logreg_instance.fit(
-        std::get<arma::mat>(dset_oper.datasets_vector.at(0)),
-        std::get<arma::vec>(dset_oper.datasets_vector.at(1))
+        std::get<mat>(dset_oper.datasets_vector.at(0)),
+        std::get<vec>(dset_oper.datasets_vector.at(1))
     );
 
-    arma::vec logreg_preds = logreg_instance.predict(
-        std::get<arma::mat>(dset_oper.datasets_vector.at(2))
+    vec logreg_preds = logreg_instance.predict(
+        std::get<mat>(dset_oper.datasets_vector.at(2))
     );
 
     dset_oper.save_dataset(

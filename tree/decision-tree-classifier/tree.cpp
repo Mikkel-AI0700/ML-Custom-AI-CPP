@@ -175,14 +175,15 @@ generator<GeneratorVariables> DecisionTreeClassifier::split_yield (
         vec column_subview = yield_params.x_feat_mat.col(
             categorical_features[index]
         );
+        ivec temp_int_subview = arma::conv_to<ivec>::from(column_subview);
         UniqueFunctionReturns subview_unq = unique(column_subview, false);
 
         for (int inner_index = 0; inner_index < subview_unq.labels.size(); inner_index++) {
             gen_var.left_subset_indices = arma::find(
-                column_subview == subview_unq.labels[inner_index]
+                temp_int_subview == subview_unq.labels[inner_index]
             );
             gen_var.right_subset_indices = arma::find(
-                column_subview != subview_unq.labels[inner_index]
+                temp_int_subview != subview_unq.labels[inner_index]
             );
 
             gen_var.split_kind = "categorical";
