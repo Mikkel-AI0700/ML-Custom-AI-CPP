@@ -22,6 +22,7 @@ add_executable(
 target_include_directories(
     CPP_SCIKIT_LEARN
     PUBLIC
+    "header-source/headers"
     "header-source/headers/base-headers"
     "header-source/headers/complex-datatypes"
     "header-source/headers/cpp-utilities"

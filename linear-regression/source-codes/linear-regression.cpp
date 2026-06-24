@@ -5,31 +5,10 @@
 #include <armadillo>
 #include <filesystem>
 #include <variant>
-#include "base.hpp"
-#include "classifier_mixin.hpp"
-#include "loader.hpp"
-#include "complex_datatypes.hpp"
+#include "linear-regression.hpp"
 
-class LinearRegression: public BaseEstimator, public ClassifierMixin {
-    public:
-        arma::vec weights;
-        float bias;
-        int epochs;
-        float learning_rate;
-        bool fit_intercept;
-        HashMapParameters parameter_constrains;
-
-        LinearRegression(int epochs, float learning_rate, bool fit_intercept);
-        void fit (arma::mat& train_x, arma::vec& train_y) override;
-        arma::vec predict (arma::mat& test_x) override;
-
-    private:
-        void initialize_weights_bias (arma::mat& train_x);
-        arma::vec compute_weights_gradients (arma::mat& train_x, arma::vec& train_y, arma::vec& predictions);
-        double compute_bias_gradients (arma::vec& train_y, arma::vec& predictions);
-        void update_weights (arma::vec& computed_weight_gradients);
-        void update_bias (float computed_bias_gradient);
-};
+using arma::vec;
+using arma::mat;
 
 LinearRegression::LinearRegression (int epochs, float learning_rate, bool fit_intercept) {
     this->epochs = epochs;
@@ -43,57 +22,68 @@ LinearRegression::LinearRegression (int epochs, float learning_rate, bool fit_in
     };
 };
 
-void LinearRegression::initialize_weights_bias (arma::mat& train_x) {
-    weights = arma::zeros<arma::vec>(train_x.n_cols);
+void LinearRegression::initialize_weights_bias (mat& train_x) {
+    mat& train_x_ref = std::get<mat>(train_x);
+    weights = arma::zeros(train_x_ref.n_cols);
 
     if (fit_intercept) {
         bias = 0.0;
     }
 }
 
-arma::vec LinearRegression::compute_weights_gradients (
-    arma::mat& train_x,
-    arma::vec& train_y,
-    arma::vec& predictions
+vec LinearRegression::compute_weights_gradients (
+    mat& train_x,
+    vec& train_y,
+    vec& predictions
 ) {
-    arma::vec weights_gradient = 1.0 / train_x.n_rows * (train_x.t() * (predictions - train_y));
+    mat& train_x_ref  = std::get<mat>(train_x);
+    vec& train_y_ref  = std::get<vec>(train_y);
+    vec& predictions_ref = std::get<vec>(predictions);
+    vec weights_gradient = 1.0 / train_x_ref.n_rows * (train_x_ref.t() * (predictions_ref - train_y_ref));
     return weights_gradient;
 }
 
-double LinearRegression::compute_bias_gradients (arma::vec& train_y, arma::vec& predictions) {
-    double bias_gradient = 1.0 / train_y.n_rows * sum((predictions - train_y));
+double LinearRegression::compute_bias_gradients (vec& train_y, vec& predictions) {
+    vec& train_y_ref  = std::get<vec>(train_y);
+    vec& predictions_ref = std::get<vec>(predictions);
+    double bias_gradient = 1.0 / train_y_ref.n_rows * arma::sum((predictions_ref - train_y_ref));
     return bias_gradient;
 }
 
-void LinearRegression::update_weights (arma::vec& computed_weight_gradients) {
-    weights = weights - learning_rate * computed_weight_gradients;
+void LinearRegression::update_weights (vec& computed_weight_gradients) {
+    vec& computed_ref = std::get<vec>(computed_weight_gradients);
+    weights = std::get<vec>(weights) - learning_rate * computed_ref;
 }
 
 void LinearRegression::update_bias (float computed_bias_gradient) {
     bias = bias - learning_rate * computed_bias_gradient;
 }
 
-void LinearRegression::fit (arma::mat& train_x, arma::vec& train_y) {
+void LinearRegression::fit (mat& train_x, vec& train_y) {
+    mat& train_x_ref = std::get<mat>(train_x);
     LinearRegression::initialize_weights_bias(train_x);
 
     for (int index = 0; index < epochs; index++) {
         std::cout << "[+] Epoch: " << (index + 1) << std::endl;
-        std::cout << "[+] Weights: " << weights.t() << std::endl;
+        std::cout << "[+] Weights: " << std::get<vec>(weights).t() << std::endl;
         std::cout << "[+] Bias: " << bias << std::endl;
 
         // Main predictions logic
-        arma::vec predictions = (train_x * weights) + bias;
+        vec predictions = (train_x_ref * std::get<vec>(weights)) + bias;
 
         // Weights and bias computing and updating
-        arma::vec weight_gradient = compute_weights_gradients(train_x, train_y, predictions);
-        double bias_gradient = compute_bias_gradients(train_y, predictions);
-        update_weights(weight_gradient);
+        vec pred_vec = predictions;
+        vec weight_gradient = compute_weights_gradients(train_x, train_y, pred_vec);
+        double bias_gradient = compute_bias_gradients(train_y, pred_vec);
+        vec wg_vec = weight_gradient;
+        update_weights(wg_vec);
         update_bias(bias_gradient);
     }
 }
 
-arma::vec LinearRegression::predict (arma::mat& test_x) {
-    arma::vec predictions = (test_x * weights) + bias;
+vec LinearRegression::predict (mat& test_x) {
+    mat& test_x_ref = std::get<mat>(test_x);
+    vec predictions = (test_x_ref * std::get<vec>(weights)) + bias;
     return predictions;
 }
 
@@ -118,14 +108,12 @@ int main (int argc, char* argv[]) {
         std::string(argv[6])
     );
 
-    linreg_instance.fit(
-        std::get<arma::mat>(dset_op.datasets_vector.at(0)),
-        std::get<arma::vec>(dset_op.datasets_vector.at(1))
-    );
+    mat train_x = std::get<mat>(dset_op.datasets_vector.at(0));
+    vec train_y = std::get<vec>(dset_op.datasets_vector.at(1));
+    mat test_x = std::get<mat>(dset_op.datasets_vector.at(2));
+    linreg_instance.fit(train_x, train_y);
 
-    arma::vec predictions = linreg_instance.predict(
-        std::get<arma::mat>(dset_op.datasets_vector.at(2))
-    );
+    vec predictions = linreg_instance.predict(test_x);
 
     dset_op.save_dataset(
         "regression",

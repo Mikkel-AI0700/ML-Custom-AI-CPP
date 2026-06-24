@@ -2,7 +2,7 @@
 #include <filesystem>
 #include <format>
 #include <armadillo>
-#include "complex_datatypes.hpp"
+#include "dataset_types.hpp"
 #include "loader.hpp"
 
 struct SavePaths save_paths;

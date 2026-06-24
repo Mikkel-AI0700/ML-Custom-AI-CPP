@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <variant>
 #include <armadillo>
 
 struct UniqueFunctionReturns {
@@ -7,4 +8,4 @@ struct UniqueFunctionReturns {
     std::vector<int> label_counts;
 };
 
-UniqueFunctionReturns unique (arma::mat& Y, bool return_counts);
+UniqueFunctionReturns unique (vec& Y, bool return_counts);

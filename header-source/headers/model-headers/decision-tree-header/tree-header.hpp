@@ -9,7 +9,8 @@
 #include <armadillo>
 #include "base.hpp"
 #include "classifier_mixin.hpp"
-#include "complex_datatypes.hpp"
+#include "dataset_types.hpp"
+#include "model_types.hpp"
 
 struct BestCandidateSplit {
     arma::mat                                  left_x_mat;
@@ -29,13 +30,11 @@ struct SplitYieldParameters {
 };
 
 struct GeneratorVariables {
-    arma::mat                                  left_x_mat;
-    arma::mat                                  right_x_mat;
-    arma::vec                                  left_y_vec;
-    arma::vec                                  right_y_vec;
+    arma::uvec                                 left_subset_indices;
+    arma::uvec                                 right_subset_indices;
     std::string                                split_kind;
-    std::optional<float>                       num_thresh;
-    std::optional<float>                       cat_thresh;
+    std::optional<float>                       num_cond;
+    std::optional<float>                       cat_cond;
     int                                        split_idx;
 };
 
@@ -97,17 +96,12 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
     private:
         std::unique_ptr<Node> root_node;
         std::vector<int> unique_classes;
-        arma::vec prob_vec;
         std::map<int, int> classes_to_index;
         arma::vec compute_class_probability (arma::vec& Y);
 
         // Math functions to compute impurity and randomness
         float compute_impurity (arma::vec& Y);
         float compute_entropy (arma::vec& Y);
-        float compute_log_loss (
-            arma::vec& pred_y, 
-            arma::vec& pred_y_prob
-        );
         float compute_information_gain (
             arma::vec& Y, 
             arma::vec& left_subset, 
@@ -119,9 +113,8 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         std::vector<int> determine_feature_split_metric (
             std::vector<int> feature_list
         );
-        std::generator<GeneratorVariables&> split_yield (
-            SplitYieldParameters& yield_parameters,
-            GeneratorVariables& generator_parameters
+        std::generator<GeneratorVariables> split_yield (
+            SplitYieldParameters &yield_parameters
         );
         std::unique_ptr<Node> create_node (
             BestCandidateSplit& rec_tree_build,
@@ -134,7 +127,7 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
             int recursive_max_depth
         );
         int traverse_tree_prediction (
-            arma::mat element, 
+            const arma::mat& element,
             const std::unique_ptr<Node>& node
         );
 };
