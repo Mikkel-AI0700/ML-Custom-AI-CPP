@@ -32,6 +32,7 @@ using arma::uvec;
 vec DecisionTreeClassifier::compute_class_probability (vec& Y) {
     vector<int> labels;
     vector<int> label_counts;
+    vec prob_vec;
     UniqueFunctionReturns unq_ret = unique(Y, true);
 
     if (unique_classes.empty()) {
@@ -41,6 +42,8 @@ vec DecisionTreeClassifier::compute_class_probability (vec& Y) {
         for (int i = 0; i < unq_ret.labels.size(); i++) {
             classes_to_index.insert({unq_ret.labels[i], i});
         }
+
+        return prob_vec;
     } else {
         prob_vec = arma::zeros(unique_classes.size());
 
@@ -74,6 +77,10 @@ float DecisionTreeClassifier::compute_information_gain (
     vec& left_subset,
     vec& right_subset
 ) {
+    if (left_subset.n_rows == 0 || right_subset.n_rows == 0) {
+        return 0.0f;
+    }
+
     float main_data_imp = DecisionTreeClassifier::determine_impurity_metric(Y);
     float left_subset_imp = DecisionTreeClassifier::determine_impurity_metric(left_subset);
     float right_subset_imp = DecisionTreeClassifier::determine_impurity_metric(right_subset);
@@ -112,6 +119,9 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
             return feature_list;
         }
 
+        // Guard to prevent infinite while-loop recursion
+        math_length = std::min(math_length, static_cast<int>(feature_list.size()));
+
         // Manual random feature selection
         while (selected_features.size() < math_length) {
             generated_number = rand() % feature_list.size();
@@ -140,9 +150,10 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
 }
 
 generator<GeneratorVariables> DecisionTreeClassifier::split_yield (
-    SplitYieldParameters &yield_params,
-    GeneratorVariables &gen_var
+    SplitYieldParameters &yield_params
 ) {
+    GeneratorVariables gen_var;
+
     for (int index = 0; index < numerical_features.size(); index++) {
         vec column_subview = yield_params.x_feat_mat.col(
             numerical_features[index]
@@ -230,15 +241,6 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
 ) {
     BestCandidateSplit best_candidate_var;
     SplitYieldParameters splt_yld;
-    GeneratorVariables gen_var;
-
-    // Filtering out the numerical and categorical features
-    numerical_features = DecisionTreeClassifier::determine_feature_split_metric(
-        numerical_features
-    );
-    categorical_features = DecisionTreeClassifier::determine_feature_split_metric(
-        categorical_features
-    );
 
     // Explicitly assigning the X and Y matrix and vector
     splt_yld.x_feat_mat = X;
@@ -258,13 +260,8 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
         return node;
     }
 
-    for (GeneratorVariables gen_var : DecisionTreeClassifier::split_yield(splt_yld, gen_var)) {
-        // Left matrix and vector "subviews"
-        mat left_mat_subview = X.rows(gen_var.left_subset_indices);
+    for (const auto& gen_var : DecisionTreeClassifier::split_yield(splt_yld)) {
         vec left_vec_subview = Y.rows(gen_var.left_subset_indices);
-
-        // Right matrix and vector "subviews"
-        mat right_mat_subview = X.rows(gen_var.right_subset_indices);
         vec right_vec_subview = Y.rows(gen_var.right_subset_indices);
 
         float crt_inf_gain = DecisionTreeClassifier::compute_information_gain(
@@ -280,8 +277,8 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
                 best_candidate_var.num_cond = gen_var.num_cond;
 
                 // Left and Right decision matrices
-                best_candidate_var.left_x_mat = left_mat_subview;
-                best_candidate_var.right_x_mat = right_mat_subview;
+                best_candidate_var.left_x_mat = X.rows(gen_var.left_subset_indices);
+                best_candidate_var.right_x_mat = X.rows(gen_var.right_subset_indices);
 
                 // Left and Right decision split vectors
                 best_candidate_var.left_y_vec = left_vec_subview;
@@ -297,8 +294,8 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
                 best_candidate_var.cat_cond = gen_var.cat_cond;
 
                 // Left and Right decision matrices
-                best_candidate_var.left_x_mat = left_mat_subview;
-                best_candidate_var.right_x_mat = right_mat_subview;
+                best_candidate_var.left_x_mat = X.rows(gen_var.left_subset_indices);
+                best_candidate_var.right_x_mat = X.rows(gen_var.right_subset_indices);
 
                 // Left and Right decision split vectors
                 best_candidate_var.left_y_vec = left_vec_subview;
@@ -347,7 +344,7 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
 }
 
 int DecisionTreeClassifier::traverse_tree_prediction (
-    mat element,
+    const mat& element,
     const unique_ptr<Node>& node
 ) {
     if (node->is_leaf_node) {
@@ -409,6 +406,14 @@ void DecisionTreeClassifier::fit (mat& X, vec& Y) {
 
     // Initialize unique_classes
     DecisionTreeClassifier::compute_class_probability(Y);
+
+    // Filtering out the numerical and categorical features
+    numerical_features = DecisionTreeClassifier::determine_feature_split_metric(
+        numerical_features
+    );
+    categorical_features = DecisionTreeClassifier::determine_feature_split_metric(
+        categorical_features
+    );
     
     root_node = DecisionTreeClassifier::build_decision_tree(
         X,

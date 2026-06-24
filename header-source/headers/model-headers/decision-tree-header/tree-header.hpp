@@ -96,7 +96,6 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
     private:
         std::unique_ptr<Node> root_node;
         std::vector<int> unique_classes;
-        arma::vec prob_vec;
         std::map<int, int> classes_to_index;
         arma::vec compute_class_probability (arma::vec& Y);
 
@@ -115,8 +114,7 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
             std::vector<int> feature_list
         );
         std::generator<GeneratorVariables> split_yield (
-            SplitYieldParameters& yield_parameters,
-            GeneratorVariables& generator_parameters
+            SplitYieldParameters &yield_parameters
         );
         std::unique_ptr<Node> create_node (
             BestCandidateSplit& rec_tree_build,
@@ -129,7 +127,7 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
             int recursive_max_depth
         );
         int traverse_tree_prediction (
-            arma::mat element,
+            const arma::mat& element,
             const std::unique_ptr<Node>& node
         );
 };
