@@ -2,6 +2,7 @@
 
 # Python's data generator variables
 python_generator_path="$(pwd)/python-utilities/generator-files/generator.py"
+python_get_dataset_path="$(pwd)/python-utilities/generator-files/get_dataset.py"
 python_model_metric_checker="$(pwd)/python-utilities/performance-metric-checkers/model_metric_checker.py"
 python_tld="$(pwd)/python-utilities"
 
@@ -10,8 +11,9 @@ cmake_build_directory="$(pwd)/build"
 
 function generate_datasets () {
     local dataset_type_name="$1"
-    local generator_config_change="$2"
-    local SKIP_DATA_GENERATION="$3"
+    local openml_dataset_name="$2"
+    local generator_config_change="$3"
+    local SKIP_DATA_GENERATION="$4"
 
     if [[ -n "${PYTHONPATH:-}" && -n "${VIRTUAL_ENV:-}" ]]; then
         printf "[+] Python TLD set: %s\n[+] Venv set: %s\n" "${PYTHONPATH}" "${VIRTUAL_ENV}"
@@ -21,10 +23,17 @@ function generate_datasets () {
     fi
 
     if [[ "${SKIP_DATA_GENERATION}" != "true" ]]; then
-        echo "[+] Running the generator: ${python_generator_path}"
-        python3 "${python_generator_path}" \
-            --dataset-type "${dataset_type_name}" \
-            --key-value-change "${generator_config_change}"
+        if [[ -n "${openml_dataset_name}" ]]; then
+            echo "[+] Fetching OpenML dataset: ${openml_dataset_name}"
+            python3 "${python_get_dataset_path}" \
+                --dataset-type "${dataset_type_name}" \
+                --dataset-name "${openml_dataset_name}"
+        else
+            echo "[+] Running the generator: ${python_generator_path}"
+            python3 "${python_generator_path}" \
+                --dataset-type "${dataset_type_name}" \
+                --key-value-change "${generator_config_change}"
+        fi
     else
         echo "[*] Training and testing dataset generation skipped. You may now proceed to compilation"
         return
@@ -112,18 +121,19 @@ function build_machine_learning_models () {
 
 function display_help () {
     echo "Usage:"
-    echo "  ./run-script.sh -G -d <dataset_type> [-k <key_value_change>] [-s]"
+    echo "  ./run-script.sh -G -d <dataset_type> [-n <dataset_name>] [-k <key_value_change>] [-s]"
     echo "  ./run-script.sh -C -m <metric_type> -T <true_data_path> -P <predictions_path> (-S -c <metric_name> | -A)"
     echo "  ./run-script.sh -O"
     echo
     echo "Modes:"
-    echo "  -G  Generate datasets (generator.py)"
+    echo "  -G  Generate datasets (generator.py or get_dataset.py)"
     echo "  -C  Evaluate ML predictions (model_metric_checker.py)"
     echo "  -O  Build ML models via CMake (build/)"
     echo "  -h  Display help"
     echo
     echo "Dataset generation options (-G):"
     echo "  -d  Dataset type: regression | classification | clustering"
+    echo "  -n  OpenML dataset name (e.g. adult, iris) – fetches from OpenML via get_dataset.py"
     echo "  -k  Config override for generator (passed to --key-value-change)"
     echo "  -s  Skip dataset generation"
     echo
@@ -144,6 +154,7 @@ function main () {
 
     # Dataset generation args
     local dataset_type_name=""
+    local openml_dataset_name=""
     local generator_config_change=""
     local SKIP_DATA_GENERATION=false
 
@@ -155,11 +166,12 @@ function main () {
     local RUN_SPECIFIC_METRICS=false
     local RUN_ALL_METRICS=false
 
-    local options="GCOhd:k:sm:T:P:c:SA"
+    local options="GCOhd:n:k:sm:T:P:c:SA"
 
     while getopts "${options}" option_flag; do
         case "${option_flag}" in
             d) dataset_type_name="${OPTARG}" ;;
+            n) openml_dataset_name="${OPTARG}" ;;
             k) generator_config_change="${OPTARG}" ;;
             s) SKIP_DATA_GENERATION=true ;;
 
@@ -190,8 +202,8 @@ function main () {
     fi
 
     if $GENERATE_DATASETS; then
-        echo "[+] Passing on script arguments to generator.py"
-        generate_datasets "${dataset_type_name}" "${generator_config_change}" "${SKIP_DATA_GENERATION}"
+        echo "[+] Passing on script arguments to generator"
+        generate_datasets "${dataset_type_name}" "${openml_dataset_name}" "${generator_config_change}" "${SKIP_DATA_GENERATION}"
         exit 0
     fi
 
