@@ -19,6 +19,7 @@ using std::variant;
 using std::optional;
 using std::generator;
 using std::unique_ptr;
+using std::out_of_range;
 using std::runtime_error;
 using std::invalid_argument;
 using std::bad_variant_access;
@@ -107,16 +108,24 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
         int math_length;
         int generated_number;
 
-        if (std::holds_alternative<string>(max_feature)) {
+        if (std::holds_alternative<string>(max_feature) ||
+            std::holds_alternative<int>(max_feature)
+        ) {
             if (std::get<string>(max_feature) == "sqrt") {
                 math_length = static_cast<int>(sqrt(feature_list.size()));
             } else if (std::get<string>(max_feature) == "log2") {
                 math_length = static_cast<int>(log2(feature_list.size()));
             } else {
-                throw std::runtime_error("[-] Error: Invalid max_feature string provided.");
+                throw std::runtime_error("Invalid max_feature string provided.");
             }
+
+            //if (feature_list.size() < std::get<int>(max_feature)) {
+            //    throw std::out_of_range("Amount of features is greater than subsample size");
+            //} else {
+                // Downsizing logic here
+            //}
         } else {
-            return feature_list;
+            throw std::runtime_error("User provided argument is neither string nor int");
         }
 
         // Guard to prevent infinite while-loop recursion
@@ -144,6 +153,9 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
         cout << "Error: " << error.what();
         return {};
     } catch (const std::runtime_error& error) {
+        cout << "Error: " << error.what();
+        return {};
+    } catch (const std::out_of_range& error) {
         cout << "Error: " << error.what();
         return {};
     }
@@ -441,6 +453,8 @@ vec DecisionTreeClassifier::predict (mat& X) {
     return arma::conv_to<vec>::from(predictions);
 }
 
+#ifndef SKIP_MAIN
 int main () {
 
 }
+#endif
