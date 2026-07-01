@@ -9,20 +9,26 @@ option(BUILD_TESTS "Build unit tests (requires Google Test)" OFF)
 
 find_package(Armadillo REQUIRED)
 
-add_executable(
-    CPP_SCIKIT_LEARN
-    tree/decision-tree-classifier/tree.cpp
-    linear-regression/source-codes/linear-regression.cpp
-    logistic-regression/source-codes/logistic-regression.cpp
+add_library(
+    CPP_SCIKIT_LEARN_LIBRARIES
+    STATIC
     header-source/header-source-files/base-source-files/base.cpp
     header-source/header-source-files/base-source-files/classifier_mixin.cpp
     header-source/header-source-files/base-source-files/regressor_mixin.cpp
     header-source/header-source-files/base-source-files/transformer_mixin.cpp
     header-source/header-source-files/cpp-utilities-source-files/loader.cpp
+    header-source/header-source-files/cpp-utilities-source-files/linalg-operations.cpp
+)
+
+add_executable(
+    CPP_SCIKIT_LEARN_EXECUTABLES
+    tree/decision-tree-classifier/tree.cpp
+    linear-regression/source-codes/linear-regression.cpp
+    logistic-regression/source-codes/logistic-regression.cpp
 )
 
 target_include_directories(
-    CPP_SCIKIT_LEARN
+    CPP_SCIKIT_LEARN_LIBRARIES
     PUBLIC
     "header-source/headers"
     "header-source/headers/base-headers"
@@ -33,12 +39,13 @@ target_include_directories(
     "header-source/headers/model-headers/decision-tree-header"
     "header-source/headers/model-headers/linear-regression-header"
     "header-source/headers/model-headers/logistic-regression-header"
-    ${ARMADILLO_INCLUDE_DIRS}
+    ${ARMADILLO_LIBRARIES}
 )
 
 target_link_libraries(
-    CPP_SCIKIT_LEARN
-    ${ARMADILLO_LIBRARIES}
+    CPP_SCIKIT_LEARN_EXECUTABLES
+    CPP_SCIKIT_LEARN_LIBRARIES
+    ${ARMADILLO_INCLUDE_DIRS}
 )
 
 if(BUILD_TESTS)
