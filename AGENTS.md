@@ -93,6 +93,7 @@
 - If any tool or command fails **two consecutive times** for the same step, stop immediately and report the failure to the user with the exact error.
 
 ### Pre-Execution Verification
+- **Command execution**: You must always pause and confirm with the user any changes or actions or plans before attempting to proceed
 - **File/directory existence**: always search (`grep`/`find`) before creating a file or directory to avoid accidental overwrites.
 - **Python projects**:
   - Every package directory must contain an `__init__.py`.
@@ -118,6 +119,6 @@
 - **Benchmark output**: label each benchmark case explicitly and display the measured time (and any other requested metric) in a human-readable format.
 
 ## Definition of Done
-- A task is complete **only when all unit tests pass** (no errors, no failures).
-- Once the tests pass, report to the user: "All tests passed successfully."
-- If any test fails, report the failures and do **not** mark the task as done--request further guidance if necessary.
+- A task is complete when you have successfully fulfilled all the user's request. 
+- Leave the execution of any programs to the user.
+- If any test fails, the user will report back to you either telling you to run the exact same command or let you run it.

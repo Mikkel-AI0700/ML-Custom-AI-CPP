@@ -23,8 +23,7 @@ LinearRegression::LinearRegression (int epochs, float learning_rate, bool fit_in
 };
 
 void LinearRegression::initialize_weights_bias (mat& train_x) {
-    mat& train_x_ref = std::get<mat>(train_x);
-    weights = arma::zeros(train_x_ref.n_cols);
+    weights = arma::zeros(train_x.n_cols);
 
     if (fit_intercept) {
         bias = 0.0;
@@ -36,23 +35,17 @@ vec LinearRegression::compute_weights_gradients (
     vec& train_y,
     vec& predictions
 ) {
-    mat& train_x_ref  = std::get<mat>(train_x);
-    vec& train_y_ref  = std::get<vec>(train_y);
-    vec& predictions_ref = std::get<vec>(predictions);
-    vec weights_gradient = 1.0 / train_x_ref.n_rows * (train_x_ref.t() * (predictions_ref - train_y_ref));
+    vec weights_gradient = 1.0 / train_x.n_rows * (train_x.t() * (predictions - train_y));
     return weights_gradient;
 }
 
 double LinearRegression::compute_bias_gradients (vec& train_y, vec& predictions) {
-    vec& train_y_ref  = std::get<vec>(train_y);
-    vec& predictions_ref = std::get<vec>(predictions);
-    double bias_gradient = 1.0 / train_y_ref.n_rows * arma::sum((predictions_ref - train_y_ref));
+    double bias_gradient = 1.0 / train_y.n_rows * arma::sum((predictions - train_y));
     return bias_gradient;
 }
 
 void LinearRegression::update_weights (vec& computed_weight_gradients) {
-    vec& computed_ref = std::get<vec>(computed_weight_gradients);
-    weights = std::get<vec>(weights) - learning_rate * computed_ref;
+    weights = weights - learning_rate * computed_weight_gradients;
 }
 
 void LinearRegression::update_bias (float computed_bias_gradient) {
@@ -60,16 +53,15 @@ void LinearRegression::update_bias (float computed_bias_gradient) {
 }
 
 void LinearRegression::fit (mat& train_x, vec& train_y) {
-    mat& train_x_ref = std::get<mat>(train_x);
     LinearRegression::initialize_weights_bias(train_x);
 
     for (int index = 0; index < epochs; index++) {
         std::cout << "[+] Epoch: " << (index + 1) << std::endl;
-        std::cout << "[+] Weights: " << std::get<vec>(weights).t() << std::endl;
+        std::cout << "[+] Weights: " << weights.t() << std::endl;
         std::cout << "[+] Bias: " << bias << std::endl;
 
         // Main predictions logic
-        vec predictions = (train_x_ref * std::get<vec>(weights)) + bias;
+        vec predictions = (train_x * weights) + bias;
 
         // Weights and bias computing and updating
         vec pred_vec = predictions;
@@ -82,8 +74,7 @@ void LinearRegression::fit (mat& train_x, vec& train_y) {
 }
 
 vec LinearRegression::predict (mat& test_x) {
-    mat& test_x_ref = std::get<mat>(test_x);
-    vec predictions = (test_x_ref * std::get<vec>(weights)) + bias;
+    vec predictions = (test_x * weights) + bias;
     return predictions;
 }
 
@@ -116,8 +107,7 @@ int main (int argc, char* argv[]) {
     vec predictions = linreg_instance.predict(test_x);
 
     dset_op.save_dataset(
-        "regression",
-        std::string(argv[7]),
+        std::filesystem::path(argv[7]),
         predictions
     ); 
 }

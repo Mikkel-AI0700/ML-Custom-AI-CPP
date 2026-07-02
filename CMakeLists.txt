@@ -9,44 +9,7 @@ option(BUILD_TESTS "Build unit tests (requires Google Test)" OFF)
 
 find_package(Armadillo REQUIRED)
 
-add_library(
-    CPP_SCIKIT_LEARN_LIBRARIES
-    STATIC
-    header-source/header-source-files/base-source-files/base.cpp
-    header-source/header-source-files/base-source-files/classifier_mixin.cpp
-    header-source/header-source-files/base-source-files/regressor_mixin.cpp
-    header-source/header-source-files/base-source-files/transformer_mixin.cpp
-    header-source/header-source-files/cpp-utilities-source-files/loader.cpp
-    header-source/header-source-files/cpp-utilities-source-files/linalg-operations.cpp
-)
-
-add_executable(
-    CPP_SCIKIT_LEARN_EXECUTABLES
-    tree/decision-tree-classifier/tree.cpp
-    linear-regression/source-codes/linear-regression.cpp
-    logistic-regression/source-codes/logistic-regression.cpp
-)
-
-target_include_directories(
-    CPP_SCIKIT_LEARN_LIBRARIES
-    PUBLIC
-    "header-source/headers"
-    "header-source/headers/base-headers"
-    "header-source/headers/complex-datatypes"
-    "header-source/headers/cpp-utilities"
-    "header-source/headers/metrics"
-    "header-source/headers/model-headers"
-    "header-source/headers/model-headers/decision-tree-header"
-    "header-source/headers/model-headers/linear-regression-header"
-    "header-source/headers/model-headers/logistic-regression-header"
-    ${ARMADILLO_LIBRARIES}
-)
-
-target_link_libraries(
-    CPP_SCIKIT_LEARN_EXECUTABLES
-    CPP_SCIKIT_LEARN_LIBRARIES
-    ${ARMADILLO_INCLUDE_DIRS}
-)
+add_subdirectory(src)
 
 if(BUILD_TESTS)
     enable_testing()
@@ -55,7 +18,7 @@ if(BUILD_TESTS)
     FetchContent_Declare(
         googletest
         GIT_REPOSITORY https://github.com/google/googletest.git
-        GIT_TAG        1.17.0
+        GIT_TAG        v1.15.0
     )
 
     FetchContent_Declare(
@@ -67,5 +30,5 @@ if(BUILD_TESTS)
     set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest googlebenchmark)
 
-    add_subdirectory(tree/DecisionTreeClassifier_UnitTest)
+    add_subdirectory(tests)
 endif()

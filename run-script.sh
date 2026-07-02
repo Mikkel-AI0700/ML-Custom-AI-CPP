@@ -24,11 +24,17 @@ function generate_datasets () {
 
     if [[ "${SKIP_DATA_GENERATION}" != "true" ]]; then
         if [[ -n "${openml_dataset_name}" ]]; then
+            local model_test_dir="${python_tld}/python-model-test/${openml_dataset_name}-test"
+            local predictions_dir="${python_tld}/model-predictions/${dataset_type_name}/${openml_dataset_name}-predictions"
+            mkdir -p "${model_test_dir}" "${predictions_dir}"
             echo "[+] Fetching OpenML dataset: ${openml_dataset_name}"
             python3 "${python_get_dataset_path}" \
                 --dataset-type "${dataset_type_name}" \
                 --dataset-name "${openml_dataset_name}"
         else
+            local model_test_dir="${python_tld}/python-model-test/${dataset_type_name}-test"
+            local predictions_dir="${python_tld}/model-predictions/${dataset_type_name}/${dataset_type_name}-predictions"
+            mkdir -p "${model_test_dir}" "${predictions_dir}"
             echo "[+] Running the generator: ${python_generator_path}"
             python3 "${python_generator_path}" \
                 --dataset-type "${dataset_type_name}" \
@@ -104,10 +110,17 @@ function evaluate_machine_learning_predictions () {
 }
 
 function build_machine_learning_models () {
+    local build_tests="$1"
+
     mkdir -p "${cmake_build_directory}"
 
+    local cmake_args="-S $(pwd) -B ${cmake_build_directory} -DCMAKE_BUILD_TYPE=Release"
+    if [[ "${build_tests}" == "true" ]]; then
+        cmake_args+=" -DBUILD_TESTS=ON"
+    fi
+
     echo "[+] Configuring CMake build directory: ${cmake_build_directory}"
-    if ! cmake -S "$(pwd)" -B "${cmake_build_directory}" -DCMAKE_BUILD_TYPE=Release; then
+    if ! cmake ${cmake_args}; then
         echo "[-] Error: CMake configure failed"
         exit 1
     fi
@@ -117,18 +130,28 @@ function build_machine_learning_models () {
         echo "[-] Error: CMake build failed"
         exit 1
     fi
+
+    if [[ "${build_tests}" == "true" ]]; then
+        echo "[+] Running unit tests"
+        if ! ctest --test-dir "${cmake_build_directory}" --output-on-failure; then
+            echo "[-] Error: Some tests failed"
+            exit 1
+        fi
+        echo "[+] All tests passed successfully"
+    fi
 }
 
 function display_help () {
     echo "Usage:"
     echo "  ./run-script.sh -G -d <dataset_type> [-n <dataset_name>] [-k <key_value_change>] [-s]"
     echo "  ./run-script.sh -C -m <metric_type> -T <true_data_path> -P <predictions_path> (-S -c <metric_name> | -A)"
-    echo "  ./run-script.sh -O"
+    echo "  ./run-script.sh -O [-t]"
     echo
     echo "Modes:"
     echo "  -G  Generate datasets (generator.py or get_dataset.py)"
     echo "  -C  Evaluate ML predictions (model_metric_checker.py)"
     echo "  -O  Build ML models via CMake (build/)"
+    echo "  -t  Enable unit tests (use with -O; sets BUILD_TESTS=ON)"
     echo "  -h  Display help"
     echo
     echo "Dataset generation options (-G):"
@@ -151,6 +174,7 @@ function main () {
     local GENERATE_DATASETS=false
     local EVALUATE_MACHINE_LEARNING_PREDICTIONS=false
     local BUILD_MACHINE_LEARNING_MODELS=false
+    local BUILD_WITH_TESTS=false
 
     # Dataset generation args
     local dataset_type_name=""
@@ -166,7 +190,7 @@ function main () {
     local RUN_SPECIFIC_METRICS=false
     local RUN_ALL_METRICS=false
 
-    local options="GCOhd:n:k:sm:T:P:c:SA"
+    local options="GCOhd:n:k:sm:T:P:c:SAt"
 
     while getopts "${options}" option_flag; do
         case "${option_flag}" in
@@ -183,6 +207,7 @@ function main () {
             c) specific_metric_name="${OPTARG}" ;;
 
             O) BUILD_MACHINE_LEARNING_MODELS=true ;;
+            t) BUILD_WITH_TESTS=true ;;
             G) GENERATE_DATASETS=true ;;
             C) EVALUATE_MACHINE_LEARNING_PREDICTIONS=true ;;
             h) display_help; exit 0 ;;
@@ -209,7 +234,7 @@ function main () {
 
     if $BUILD_MACHINE_LEARNING_MODELS; then
         echo "[+] Building machine learning models via CMake"
-        build_machine_learning_models
+        build_machine_learning_models "${BUILD_WITH_TESTS}"
         exit 0
     fi
 

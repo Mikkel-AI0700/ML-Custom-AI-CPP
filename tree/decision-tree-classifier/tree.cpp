@@ -116,7 +116,7 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
             } else if (std::get<string>(max_feature) == "log2") {
                 math_length = static_cast<int>(log2(feature_list.size()));
             } else {
-                throw std::runtime_error("Invalid max_feature string provided.");
+                throw runtime_error("Invalid max_feature string provided.");
             }
 
             //if (feature_list.size() < std::get<int>(max_feature)) {
@@ -125,7 +125,7 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
                 // Downsizing logic here
             //}
         } else {
-            throw std::runtime_error("User provided argument is neither string nor int");
+            throw runtime_error("User provided argument is neither string nor int");
         }
 
         // Guard to prevent infinite while-loop recursion
@@ -152,10 +152,10 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
     } catch (const bad_variant_access& error) {
         cout << "Error: " << error.what();
         return {};
-    } catch (const std::runtime_error& error) {
+    } catch (const runtime_error& error) {
         cout << "Error: " << error.what();
         return {};
-    } catch (const std::out_of_range& error) {
+    } catch (const out_of_range& error) {
         cout << "Error: " << error.what();
         return {};
     }

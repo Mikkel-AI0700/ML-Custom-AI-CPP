@@ -8,4 +8,4 @@ struct UniqueFunctionReturns {
     std::vector<int> label_counts;
 };
 
-UniqueFunctionReturns unique (vec& Y, bool return_counts);
+UniqueFunctionReturns unique (arma::vec& Y, bool return_counts);

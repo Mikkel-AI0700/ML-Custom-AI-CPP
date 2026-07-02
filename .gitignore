@@ -1,1 +1,21 @@
+# Build artifacts
+build/
+
+# IDE files
+.idea/
+.vscode/
+
+# Aider cache
 .aider*
+
+# Python virtual environment
+python-utilities/generator-venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# OS files
+.DS_Store
+Thumbs.db

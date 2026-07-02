@@ -2,13 +2,6 @@
 #include <filesystem>
 #include <armadillo>
 #include "dataset_types.hpp"
-#include "loader.hpp"
-
-struct SavePaths {
-    std::filesystem::path regression_save_path = "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-utilities/model-predictions/regression/";
-    std::filesystem::path classification_save_path = "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-utilities/model-predictions/classification/";
-    std::filesystem::path clustering_save_path = "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-utilities/model-predictions/clustering/";
-};
 
 class DatasetOperations {
     public:
@@ -22,8 +15,7 @@ class DatasetOperations {
             std::filesystem::path test_y
         );
         void save_dataset (
-            std::string save_type,
-            std::string model_filename,
-            arma::colvec model_predictions
+            std::filesystem::path save_path,
+            arma::vec model_predictions
         );
 };

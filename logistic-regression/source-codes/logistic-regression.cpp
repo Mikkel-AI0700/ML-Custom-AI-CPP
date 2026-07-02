@@ -123,8 +123,7 @@ int main (int argc, char* argv[]) {
     );
 
     dset_oper.save_dataset(
-        "classification", 
-        std::string(argv[7]),
+        std::filesystem::path(argv[7]),
         logreg_preds
     );
     
