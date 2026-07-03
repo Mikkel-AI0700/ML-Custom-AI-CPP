@@ -265,7 +265,7 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
         return node;
     }
 
-    if (X.n_rows <= min_samples_split) {
+    if (X.n_rows < min_samples_split) {
         cout << "[*] Stopping training. Min samples split hit" << std::endl;
         best_candidate_var.computed_probs = DecisionTreeClassifier::compute_class_probability(Y);
         auto node = DecisionTreeClassifier::create_node(best_candidate_var, false, true);
@@ -324,8 +324,8 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
         return leaf_node;
     }
 
-    if (best_candidate_var.left_y_vec.n_rows <= min_samples_leaf ||
-        best_candidate_var.right_y_vec.n_rows <= min_samples_leaf
+    if (best_candidate_var.left_y_vec.n_rows < min_samples_leaf ||
+        best_candidate_var.right_y_vec.n_rows < min_samples_leaf
     ) {
         cout << "[*] Stopping training! Minimum samples split hit.";
         best_candidate_var.computed_probs = DecisionTreeClassifier::compute_class_probability(Y);
@@ -455,6 +455,36 @@ vec DecisionTreeClassifier::predict (mat& X) {
 
 #ifndef SKIP_MAIN
 int main () {
+    DatasetOperations dset_ops;
+    DecisionTreeClassifier tree(
+        "gini",
+        10,
+        "sqrt",
+        10,
+        20,
+        30,
+        0.0001
+    );
 
+    dset_ops.construct_datasets();
+    dset_ops.load_datasets(
+        "python-utilities/test-data/classification/adult/adult-train_x.csv",
+        "python-utilities/test-data/classification/adult/adult-test_x.csv",
+        "python-utilities/test-data/classification/adult/adult-train_y.csv",
+        "python-utilities/test-data/classification/adult/adult-test_y.csv"
+    );
+
+    mat train_x = std::get<mat>(dset_ops.datasets_vector.at(0));
+    mat test_x = std::get<mat>(dset_ops.datasets_vector.at(1));
+    vec train_y = std::get<vec>(dset_ops.datasets_vector.at(2));
+
+    tree.fit(train_x, train_y);
+
+    vec predictions = tree.predict(test_x);
+
+    dset_ops.save_dataset(
+        "python-utiities/python-model-test/adult-test/adult_cpp_preds.csv",
+        predictions
+    );
 }
 #endif

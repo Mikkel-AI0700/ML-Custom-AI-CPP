@@ -71,29 +71,33 @@ def main() -> None:
 
     stratify = y if dset_type == "classification" else None
     try:
-        train_df, test_df = train_test_split(
-            df, train_size=0.8, test_size=0.2, shuffle=True,
-            random_state=42, stratify=stratify
+        train_x, test_x, train_y, test_y = train_test_split(
+            df.iloc[:, :-1],
+            df.iloc[:, -1],
+            train_size=0.8, 
+            test_size=0.2, 
+            shuffle=True,
+            random_state=42, 
+            stratify=stratify
         )
     except Exception as exc:
         print(f"[-] Error: Train/test split failed: {exc}")
         sys.exit(1)
 
-    train_path = target_dir / f"{dset_name}-train.csv"
-    test_path = target_dir / f"{dset_name}-test.csv"
+    train_x_path = target_dir / f"{dset_name}-train_x.csv"
+    test_x_path = target_dir / f"{dset_name}-test_x.csv"
+    train_y_path = target_dir / f"{dset_name}-train_y.csv"
+    test_y_path = target_dir / f"{dset_name}-test_y.csv"
+    
+    generated_datasets = [train_x, test_x, train_y, test_y]
+    dataset_paths = [train_x_path, test_x_path, train_y_path, test_y_path]
 
     try:
-        train_df.to_csv(train_path, index=False)
-        test_df.to_csv(test_path, index=False)
+        for dset, dset_path in zip(generated_datasets, dataset_paths):
+            dset.to_csv(dset_path, index=False)
     except OSError as exc:
         print(f"[-] Error: Could not write CSV files to '{target_dir}': {exc}")
         sys.exit(1)
-
-    print(f"[+] Dataset '{dset_name}' saved to '{target_dir}'")
-    print(f"    Train: {train_path} ({len(train_df)} rows)")
-    print(f"    Test:  {test_path} ({len(test_df)} rows)")
-    print(f"    Features: {features_path}")
-
 
 if __name__ == "__main__":
     main()

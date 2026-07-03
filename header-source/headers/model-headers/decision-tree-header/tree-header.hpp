@@ -73,7 +73,7 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
             int max_depth = 10,
             SIDual max_feature = "sqrt",
             int max_leaf_nodes = 10,
-            int min_samples_leaf = 50,
+            int min_samples_leaf = 20,
             int min_samples_split = 30,
             float min_information_gain = 1e-5f,
             std::vector<int> numerical_features = {},
