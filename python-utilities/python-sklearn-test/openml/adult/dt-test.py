@@ -1,3 +1,4 @@
+from pathlib import Path
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.preprocessing import (
@@ -100,25 +101,20 @@ def transform_preprocessors(X: pd.DataFrame, Y: pd.DataFrame,
     return X, Y
 
 def main():
-    dataset_paths = [
-        "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-utilities/test-data/classification/adult/adult-train_x.csv",
-        "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-utilities/test-data/classification/adult/adult-test_x.csv",
-        "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-utilities/test-data/classification/adult/adult-train_y.csv",
-        "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/python-utilities/test-data/classification/adult/adult-test_y.csv"
-    ]
-    
-    train_x = pd.read_csv(dataset_paths[0])
-    test_x = pd.read_csv(dataset_paths[1])
-    train_y = pd.read_csv(dataset_paths[2])
-    test_y = pd.read_csv(dataset_paths[3])
+    BASE = Path(__file__).resolve().parent.parent.parent.parent
+    dataset_dir = BASE / "datasets" / "openml" / "adult"
+    train_x = pd.read_csv(dataset_dir / "train_x.csv")
+    test_x = pd.read_csv(dataset_dir / "test_x.csv")
+    train_y = pd.read_csv(dataset_dir / "train_y.csv")
+    test_y = pd.read_csv(dataset_dir / "test_y.csv")
 
     X_train, Y_train, bundle = fit_preprocessors(train_x, train_y)
     X_test, Y_test = transform_preprocessors(test_x, test_y, bundle)
     
-    X_train.to_csv(dataset_paths[0])
-    Y_train.to_csv(dataset_paths[1])
-    X_test.to_csv(dataset_paths[2])
-    Y_test.to_csv(dataset_paths[3])
+    X_train.to_csv(dataset_dir / "train_x.csv")
+    Y_train.to_csv(dataset_dir / "train_y.csv")
+    X_test.to_csv(dataset_dir / "test_x.csv")
+    Y_test.to_csv(dataset_dir / "test_y.csv")
     
     dt_grid = {
         "criterion": "gini",

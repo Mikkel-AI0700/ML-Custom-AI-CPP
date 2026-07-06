@@ -21,15 +21,7 @@ def main() -> None:
     dset_type = parsed.dset_type
     dset_name = parsed.dset_name
 
-    if dset_type == "regression":
-        target_dir = base_path / "test-data" / "regression" / dset_name
-    elif dset_type == "classification":
-        target_dir = base_path / "test-data" / "classification" / dset_name
-    elif dset_type == "clustering":
-        target_dir = base_path / "test-data" / "clustering" / dset_name
-    else:
-        print(f"[-] Error: Unknown dataset type '{dset_type}'")
-        sys.exit(1)
+    target_dir = base_path / "datasets" / "openml" / dset_name
 
     try:
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -56,7 +48,7 @@ def main() -> None:
     numerical_cols = list(df.select_dtypes(include=["number"]).columns)
     categorical_cols = list(df.select_dtypes(include=["object", "category"]).columns)
 
-    features_path = target_dir / f"{dset_name}-features.txt"
+    features_path = target_dir / "features.txt"
     try:
         with open(features_path, "w") as f:
             f.write(f"# Numerical features ({len(numerical_cols)}):\n")
@@ -84,10 +76,10 @@ def main() -> None:
         print(f"[-] Error: Train/test split failed: {exc}")
         sys.exit(1)
 
-    train_x_path = target_dir / f"{dset_name}-train_x.csv"
-    test_x_path = target_dir / f"{dset_name}-test_x.csv"
-    train_y_path = target_dir / f"{dset_name}-train_y.csv"
-    test_y_path = target_dir / f"{dset_name}-test_y.csv"
+    train_x_path = target_dir / "train_x.csv"
+    test_x_path = target_dir / "test_x.csv"
+    train_y_path = target_dir / "train_y.csv"
+    test_y_path = target_dir / "test_y.csv"
     
     generated_datasets = [train_x, test_x, train_y, test_y]
     dataset_paths = [train_x_path, test_x_path, train_y_path, test_y_path]

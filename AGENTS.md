@@ -13,7 +13,7 @@
 
 ## Data workflow (Python -> C++ -> Python)
 1. `./run-script.sh -G -d <type>` (regression|classification|clustering) -> sklearn CSVs
-2. Run the C++ exe with 8 CLI args: `epochs lr train_x train_y test_x test_y out_filename`
+2. Run the C++ exe (paths are hardcoded in each model's `main()`) -> predictions CSV
 3. `./run-script.sh -C -m <type> -T <truth> -P <predictions> (-S -c <metric> | -A)`
 
 ## Python environment
@@ -25,7 +25,6 @@
 ## C++ quirks
 - `TrainTestData` is `std::vector<std::variant<arma::mat, arma::colvec, arma::rowvec>>`
   -- must `std::get<>` on every access, even when the type is already known
-- `loader.hpp:8-11` hardcodes absolute `SavePaths` -- update if repo is moved
 - All models inherit `BaseEstimator`; params use `HashMapParameters`
   (`std::map<std::string, std::variant<int, float, std::string, bool>>`)
 
@@ -34,6 +33,42 @@
 - No linter, formatter, or typechecker configured
 - CSVs loaded/saved with `arma::csv_ascii`
 - Dataset generator params in `python-utilities/json-config-files/<type>/`
+
+## Directory layout (`python-utilities/`)
+```
+python-utilities/
+├── __init__.py
+├── generator-files/               # Data generation scripts
+│   ├── generator.py               #   Synthetic datasets (sklearn)
+│   └── get_dataset.py             #   OpenML dataset fetcher
+├── json-config-files/             # Generator configuration JSONs
+│   └── <type>/                    #   regression, classification, clustering
+│       └── <type>-generator-configuration.json
+├── performance-metric-checkers/   # Metric evaluation scripts
+│   └── model_metric_checker.py
+├── datasets/
+│   ├── synthetic/<name>/          # Generated datasets (generator.py)
+│   │   ├── train_x.csv / train_y.csv
+│   │   ├── test_x.csv  / test_y.csv
+│   │   └── predictions/
+│   │       ├── cpp-predictions.csv
+│   │       └── python-predictions.csv
+│   └── openml/<name>/             # Fetched datasets (get_dataset.py)
+│       ├── train_x.csv / train_y.csv
+│       ├── test_x.csv  / test_y.csv
+│       ├── features.txt           # [OpenML only]
+│       └── predictions/
+│           ├── cpp-predictions.csv
+│           └── python-predictions.csv
+└── python-sklearn-test/           # Python sklearn test scripts
+    ├── synthetic/<name>/
+    │   └── dt-test.py
+    └── openml/<name>/
+        └── dt-test.py
+```
+- **Dataset path** is set via a `const std::string dataset_path` in each model's `main()`.
+- Hardcoded paths are relative to project root: `"python-utilities/datasets/synthetic/regression"`.
+- Switch datasets by changing the `dataset_path` variable in the C++ source.
 
 # Agent Instructions: ML/AI R&D Assistant
 

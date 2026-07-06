@@ -1,0 +1,18 @@
+# Numerical features (2):
+fnlwgt
+education-num
+
+# Categorical features (13):
+age
+workclass
+education
+marital-status
+occupation
+relationship
+race
+sex
+capitalgain
+capitalloss
+hoursperweek
+native-country
+target

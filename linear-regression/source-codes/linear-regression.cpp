@@ -7,6 +7,8 @@
 #include <variant>
 #include "linear-regression.hpp"
 
+using std::string;
+
 using arma::vec;
 using arma::mat;
 
@@ -78,25 +80,18 @@ vec LinearRegression::predict (mat& test_x) {
     return predictions;
 }
 
-// Purpose of main function is to provide a way to test the model
-int main (int argc, char* argv[]) {
-    if (argc < 8) {
-        throw std::range_error("[-] Error: Argument count must be 8");
-    }
+int main () {
+    const string dataset_path = "python-utilities/datasets/synthetic/regression";
 
     DatasetOperations dset_op;
-    LinearRegression linreg_instance(
-        std::stoi(argv[1]),
-        std::stof(argv[2]),
-        true
-    );
+    LinearRegression linreg_instance(100, 0.01f, true);
 
     dset_op.construct_datasets();
     dset_op.load_datasets(
-        std::string(argv[3]),
-        std::string(argv[4]),
-        std::string(argv[5]),
-        std::string(argv[6])
+        dataset_path + "/train_x.csv",
+        dataset_path + "/train_y.csv",
+        dataset_path + "/test_x.csv",
+        dataset_path + "/test_y.csv"
     );
 
     mat train_x = std::get<mat>(dset_op.datasets_vector.at(0));
@@ -107,8 +102,8 @@ int main (int argc, char* argv[]) {
     vec predictions = linreg_instance.predict(test_x);
 
     dset_op.save_dataset(
-        std::filesystem::path(argv[7]),
+        dataset_path + "/predictions/cpp-predictions.csv",
         predictions
-    ); 
+    );
 }
 

@@ -6,6 +6,8 @@
 #include "complex-datatypes/dataset_types.hpp"
 #include "complex-datatypes/model_types.hpp"
 
+using std::string;
+
 using arma::vec;
 using arma::mat;
 
@@ -97,20 +99,18 @@ vec LogisticRegression::predict (mat& test_x) {
     return sigmoid_predictions;
 }
 
-int main (int argc, char* argv[]) {
-    if (argc < 8) {
-        throw std::runtime_error("[-] Error: Argument count must be exactly 8");
-    }
+int main () {
+    const string dataset_path = "python-utilities/datasets/synthetic/classification";
 
     DatasetOperations dset_oper;
-    LogisticRegression logreg_instance (std::stoi(argv[1]), std::stof(argv[2]), true);
+    LogisticRegression logreg_instance(100, 0.01f, true);
 
     dset_oper.construct_datasets();
     dset_oper.load_datasets(
-        std::filesystem::path(argv[3]),
-        std::filesystem::path(argv[4]),
-        std::filesystem::path(argv[5]),
-        std::filesystem::path(argv[6])
+        dataset_path + "/train_x.csv",
+        dataset_path + "/train_y.csv",
+        dataset_path + "/test_x.csv",
+        dataset_path + "/test_y.csv"
     );
 
     logreg_instance.fit(
@@ -123,8 +123,7 @@ int main (int argc, char* argv[]) {
     );
 
     dset_oper.save_dataset(
-        std::filesystem::path(argv[7]),
+        dataset_path + "/predictions/cpp-predictions.csv",
         logreg_preds
     );
-    
 }

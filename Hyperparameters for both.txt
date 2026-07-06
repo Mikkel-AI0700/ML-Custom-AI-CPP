@@ -1,0 +1,19 @@
+Hyperparameters for both C++ DTC and Python DTC
+
+1. Split metric = "gini"
+2. max_depth = "10"
+3. max_feature = "sqrt"
+4. max_leaf_nodes = 20
+5. min_samples_leaf = 20
+6. min_samples_split = 20
+7. min_information_gain = 0.001
+
+dt_grid = {
+	"criterion": "gini",
+	"max_depth: 10,
+	"max_feature": "sqrt",
+	"max_leaf_nodes": 20,
+	"min_samples_leaf": 20,
+	"min_samples_split": 20,
+	"min_impurity_decrease": 0.001
+}

@@ -108,9 +108,7 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
         int math_length;
         int generated_number;
 
-        if (std::holds_alternative<string>(max_feature) ||
-            std::holds_alternative<int>(max_feature)
-        ) {
+        if (std::holds_alternative<string>(max_feature)) {
             if (std::get<string>(max_feature) == "sqrt") {
                 math_length = static_cast<int>(sqrt(feature_list.size()));
             } else if (std::get<string>(max_feature) == "log2") {
@@ -118,14 +116,14 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
             } else {
                 throw runtime_error("Invalid max_feature string provided.");
             }
-
-            //if (feature_list.size() < std::get<int>(max_feature)) {
-            //    throw std::out_of_range("Amount of features is greater than subsample size");
-            //} else {
-                // Downsizing logic here
-            //}
+        } else if (std::holds_alternative<int>(max_feature)) {
+            if (feature_list.size() > std::get<int>(max_feature)) {
+                throw std::out_of_range("Amount of features is greater than subsample size");
+            } else {
+                math_length = std::get<int>(max_feature);
+            }
         } else {
-            throw runtime_error("User provided argument is neither string nor int");
+            throw bad_variant_access();
         }
 
         // Guard to prevent infinite while-loop recursion
@@ -254,9 +252,18 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
     BestCandidateSplit best_candidate_var;
     SplitYieldParameters splt_yld;
 
-    // Explicitly assigning the X and Y matrix and vector
+    vector<int> temp_num_feat = DecisionTreeClassifier::determine_feature_split_metric(
+        numerical_features
+    );
+    vector<int> temp_cat_feat = DecisionTreeClassifier::determine_feature_split_metric(
+        categorical_features
+    );
+
+    // Explicitly assigning matrix/vector and subsampled features
     splt_yld.x_feat_mat = X;
     splt_yld.y_target_vec = Y;
+    splt_yld.subsampled_numerical_features = temp_num_feat;
+    splt_yld.subsampled_categorical_features = temp_cat_feat;
 
     if (recursive_max_depth == max_depth) {
         cout << "[*] Stopping training. Max depth hit" << std::endl;
@@ -419,14 +426,6 @@ void DecisionTreeClassifier::fit (mat& X, vec& Y) {
     // Initialize unique_classes
     DecisionTreeClassifier::compute_class_probability(Y);
 
-    // Filtering out the numerical and categorical features
-    numerical_features = DecisionTreeClassifier::determine_feature_split_metric(
-        numerical_features
-    );
-    categorical_features = DecisionTreeClassifier::determine_feature_split_metric(
-        categorical_features
-    );
-    
     root_node = DecisionTreeClassifier::build_decision_tree(
         X,
         Y,
@@ -455,6 +454,8 @@ vec DecisionTreeClassifier::predict (mat& X) {
 
 #ifndef SKIP_MAIN
 int main () {
+    const std::string dataset_path = "python-utilities/datasets/openml/adult";
+
     DatasetOperations dset_ops;
     DecisionTreeClassifier tree(
         "gini",
@@ -468,22 +469,22 @@ int main () {
 
     dset_ops.construct_datasets();
     dset_ops.load_datasets(
-        "python-utilities/test-data/classification/adult/adult-train_x.csv",
-        "python-utilities/test-data/classification/adult/adult-test_x.csv",
-        "python-utilities/test-data/classification/adult/adult-train_y.csv",
-        "python-utilities/test-data/classification/adult/adult-test_y.csv"
+        dataset_path + "/train_x.csv",
+        dataset_path + "/train_y.csv",
+        dataset_path + "/test_x.csv",
+        dataset_path + "/test_y.csv"
     );
 
     mat train_x = std::get<mat>(dset_ops.datasets_vector.at(0));
-    mat test_x = std::get<mat>(dset_ops.datasets_vector.at(1));
-    vec train_y = std::get<vec>(dset_ops.datasets_vector.at(2));
+    vec train_y = std::get<vec>(dset_ops.datasets_vector.at(1));
+    mat test_x = std::get<mat>(dset_ops.datasets_vector.at(2));
 
     tree.fit(train_x, train_y);
 
     vec predictions = tree.predict(test_x);
 
     dset_ops.save_dataset(
-        "python-utiities/python-model-test/adult-test/adult_cpp_preds.csv",
+        dataset_path + "/predictions/cpp-predictions.csv",
         predictions
     );
 }

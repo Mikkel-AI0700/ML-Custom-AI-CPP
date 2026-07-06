@@ -1,5 +1,4 @@
 import os
-import re
 import json
 import argparse
 from pathlib import Path
@@ -12,16 +11,12 @@ from sklearn.datasets import (
     make_blobs
 )
 
-def _read_generator_configuration (json_configuration_path: Path):
+def _read_generator_configuration(json_configuration_path: Path):
     with json_configuration_path.open("r") as config_path:
         dataset_configuration_dict = json.load(config_path)
     return dataset_configuration_dict
 
-def _write_to_file (filepath: Path, X: pd.DataFrame, Y: pd.DataFrame):
-    for directory_content in os.listdir(filepath):
-        if re.findall(r"(train|test)_(x|y)_dataset.csv", directory_content):
-            print(f"[*] Removed: {directory_content}")
-
+def _write_to_file(filepath: Path, X: pd.DataFrame, Y: pd.DataFrame):
     train_x, test_x, train_y, test_y = train_test_split(
         X,
         Y,
@@ -34,11 +29,11 @@ def _write_to_file (filepath: Path, X: pd.DataFrame, Y: pd.DataFrame):
     generated_datasets = [train_x, train_y, test_x, test_y]
     filenames = ["train_x.csv", "train_y.csv", "test_x.csv", "test_y.csv"]
 
-    for (dataset, data_filename) in zip(generated_datasets, filenames):
+    for dataset, data_filename in zip(generated_datasets, filenames):
         dataset = pd.DataFrame(dataset)
         dataset.to_csv(os.path.join(filepath, data_filename), index=False)
 
-def _change_configuration (config_key_value: dict[str, Any], generator_configuration: dict[str, Any]):
+def _change_configuration(config_key_value: dict[str, Any], generator_configuration: dict[str, Any]):
     try:
         if len(config_key_value) == 0:
             return
@@ -54,7 +49,7 @@ def _change_configuration (config_key_value: dict[str, Any], generator_configura
         print(non_existent_config_key)
         exit(1)
 
-def create_regression (
+def create_regression(
     dataset_gen_path: Path, 
     regressor_config: Path, 
     key_value_config: dict[str, Any]
@@ -64,7 +59,7 @@ def create_regression (
     X, Y = make_regression(**regressor_configuration)
     _write_to_file(dataset_gen_path, pd.DataFrame(X), pd.DataFrame(Y))
 
-def create_classification (
+def create_classification(
     dataset_gen_path: Path, 
     classification_config: Path, 
     key_value_config: dict[str, Any]
@@ -74,7 +69,7 @@ def create_classification (
     X, Y = make_classification(**classification_configuration)
     _write_to_file(dataset_gen_path, pd.DataFrame(X), pd.DataFrame(Y))
 
-def create_clustering (
+def create_clustering(
     dataset_gen_path: Path, 
     clustering_config: Path, 
     key_value_config: dict[str, Any]
@@ -85,47 +80,45 @@ def create_clustering (
     _write_to_file(dataset_gen_path, pd.DataFrame(X), pd.DataFrame(Y))
 
 
-def main ():
+def main():
     BASE_PATH = Path(__file__).resolve().parent.parent
 
-    regressor_dataset_path = BASE_PATH / "test-data/regression-data"
-    classification_dataset_path = BASE_PATH / "test-data/classification-data"
-    clustering_dataset_path = BASE_PATH / "test-data/clustering-data"
-
-    regressor_json_path = BASE_PATH / "json-config-files/regressor/regressor-generator-configuration.json"
+    regressor_json_path = BASE_PATH / "json-config-files/regression/regression-generator-configuration.json"
     classification_json_path = BASE_PATH / "json-config-files/classification/classification-generator-configuration.json"
     clustering_json_path = BASE_PATH / "json-config-files/clustering/clustering-generator-configuration.json"
 
     argp = argparse.ArgumentParser(description="ML dataset generators")
     argp.add_argument("--dataset-type", required=True, dest="dset_type")
-    argp.add_argument("--use-default", required=False, action="store_true")
+    argp.add_argument("--name", required=False, dest="dataset_name", default=None)
     argp.add_argument("--key-value-change", required=False, dest="key_value_parameter")
 
     parsed_arguments = argp.parse_args()
+
+    dataset_name = parsed_arguments.dataset_name if parsed_arguments.dataset_name else parsed_arguments.dset_type
+    dataset_path = BASE_PATH / "datasets" / "synthetic" / dataset_name
+    dataset_path.mkdir(parents=True, exist_ok=True)
 
     try:
         if parsed_arguments.dset_type == "regression":
             print("[+] Creating training and testing regression datasets")
             create_regression(
-                regressor_dataset_path,
+                dataset_path,
                 regressor_json_path, 
                 parsed_arguments.key_value_parameter
             )
         elif parsed_arguments.dset_type == "classification":
             print("[+] Creating training and testing classification datasets")
             create_classification(
-                parsed_arguments.dataset_filename,
-                classification_dataset_path,
+                dataset_path,
                 classification_json_path,
-                parsed_arguments.key_value_change
+                parsed_arguments.key_value_parameter
             )
         elif parsed_arguments.dset_type == "clustering":
             print("[+] Creating training and testing clustering datasets")
             create_clustering(
-                parsed_arguments.dset_type, 
-                clustering_dataset_path,
+                dataset_path,
                 clustering_json_path,
-                parsed_arguments.key_value_change
+                parsed_arguments.key_value_parameter
             )
         else:
             raise ValueError(f"[-] Error: Incorrect dataset type -> {parsed_arguments.dset_type}")

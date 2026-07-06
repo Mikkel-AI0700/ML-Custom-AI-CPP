@@ -27,6 +27,8 @@ struct BestCandidateSplit {
 struct SplitYieldParameters {
     arma::mat                                  x_feat_mat;
     arma::vec                                  y_target_vec;
+    std::vector<int>                           subsampled_numerical_features;
+    std::vector<int>                           subsampled_categorical_features;
 };
 
 struct GeneratorVariables {

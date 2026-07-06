@@ -24,16 +24,18 @@ function generate_datasets () {
 
     if [[ "${SKIP_DATA_GENERATION}" != "true" ]]; then
         if [[ -n "${openml_dataset_name}" ]]; then
-            local model_test_dir="${python_tld}/python-model-test/${openml_dataset_name}-test"
-            local predictions_dir="${python_tld}/model-predictions/${dataset_type_name}/${openml_dataset_name}-predictions"
+            local dataset_name="${openml_dataset_name}"
+            local model_test_dir="${python_tld}/python-sklearn-test/openml/${dataset_name}"
+            local predictions_dir="${python_tld}/datasets/openml/${dataset_name}/predictions"
             mkdir -p "${model_test_dir}" "${predictions_dir}"
             echo "[+] Fetching OpenML dataset: ${openml_dataset_name}"
             python3 "${python_get_dataset_path}" \
                 --dataset-type "${dataset_type_name}" \
                 --dataset-name "${openml_dataset_name}"
         else
-            local model_test_dir="${python_tld}/python-model-test/${dataset_type_name}-test"
-            local predictions_dir="${python_tld}/model-predictions/${dataset_type_name}/${dataset_type_name}-predictions"
+            local dataset_name="${dataset_type_name}"
+            local model_test_dir="${python_tld}/python-sklearn-test/synthetic/${dataset_name}"
+            local predictions_dir="${python_tld}/datasets/synthetic/${dataset_name}/predictions"
             mkdir -p "${model_test_dir}" "${predictions_dir}"
             echo "[+] Running the generator: ${python_generator_path}"
             python3 "${python_generator_path}" \
