@@ -12,6 +12,7 @@
 #include "linalg-operations.hpp"
 
 // C++ STL library
+using std::endl;
 using std::cout;
 using std::string;
 using std::vector;
@@ -73,23 +74,19 @@ float DecisionTreeClassifier::compute_entropy (vec& Y) {
     return ent_val;
 }
 
-float DecisionTreeClassifier::compute_information_gain (
-    vec& Y,
-    vec& left_subset,
-    vec& right_subset
-) {
-    if (left_subset.n_rows == 0 || right_subset.n_rows == 0) {
+float DecisionTreeClassifier::compute_information_gain (vec& Y, vec& left, vec& right) {
+    if (left.n_rows == 0 || right.n_rows == 0) {
         return 0.0f;
     }
 
-    float main_data_imp = DecisionTreeClassifier::determine_impurity_metric(Y);
-    float left_subset_imp = DecisionTreeClassifier::determine_impurity_metric(left_subset);
-    float right_subset_imp = DecisionTreeClassifier::determine_impurity_metric(right_subset);
+    /* Information Gain = parent_impurity - weighted_sum(child_impurities) */
+    const float n_parent = static_cast<float>(Y.n_rows);
+    const float weight_left = static_cast<float>(left.n_rows) / n_parent;
+    const float weight_right = static_cast<float>(right.n_rows) / n_parent;
 
-    float left_subset_weighted = (static_cast<float>(left_subset.n_rows) / static_cast<float>(Y.n_rows)) * left_subset_imp;
-    float right_subset_weighted = (static_cast<float>(right_subset.n_rows) / static_cast<float>(Y.n_rows)) * right_subset_imp;
-
-    return main_data_imp - (left_subset_weighted + right_subset_weighted);
+    return determine_impurity_metric(Y)
+        - (weight_left * determine_impurity_metric(left)
+         + weight_right * determine_impurity_metric(right));
 }
 
 float DecisionTreeClassifier::determine_impurity_metric (vec& Y) {
@@ -164,19 +161,27 @@ generator<GeneratorVariables> DecisionTreeClassifier::split_yield (
 ) {
     GeneratorVariables gen_var;
 
-    for (int index = 0; index < numerical_features.size(); index++) {
+    for (int index = 0; index < yield_params.subsampled_numerical_features.size(); index++) {
         vec column_subview = yield_params.x_feat_mat.col(
-            numerical_features[index]
+            yield_params.subsampled_numerical_features[index]
         );
+        vec midpoints;
 
         UniqueFunctionReturns subview_unq = unique(column_subview, false);
         vec labels = arma::conv_to<vec>::from(subview_unq.labels);
-        vec midpoints = (
-            labels.subvec(0, labels.n_elem - 2) +
-            labels.subvec(1, labels.n_elem - 1)
-        ) / 2.0;
 
-        for (int inner_index = 0; inner_index < midpoints.n_elem; inner_index++) {
+        // Small guard to check if feature still
+        // still has any unique values to make a threshold midpoint
+        if (subview_unq.labels.size() >= 2) {
+            midpoints = (
+                labels.subvec(0, labels.n_elem - 2) +
+                labels.subvec(1, labels.n_elem - 1)
+            ) / 2.0;
+        } else {
+            continue;
+        }
+
+        for (int inner_index = 0; inner_index < midpoints.n_rows; inner_index++) {
             gen_var.left_subset_indices = arma::find(
                 column_subview > midpoints[inner_index]
             );
@@ -185,16 +190,16 @@ generator<GeneratorVariables> DecisionTreeClassifier::split_yield (
             );
 
             gen_var.split_kind = "numeric";
-            gen_var.split_idx = numerical_features[index];
+            gen_var.split_idx = yield_params.subsampled_numerical_features[index];
             gen_var.num_cond = midpoints[inner_index];
 
             co_yield gen_var;
         }
     }
 
-    for (int index = 0; index < categorical_features.size(); index++) {
+    for (int index = 0; index < yield_params.subsampled_categorical_features.size(); index++) {
         vec column_subview = yield_params.x_feat_mat.col(
-            categorical_features[index]
+            yield_params.subsampled_categorical_features[index]
         );
         ivec temp_int_subview = arma::conv_to<ivec>::from(column_subview);
         UniqueFunctionReturns subview_unq = unique(column_subview, false);
@@ -208,7 +213,7 @@ generator<GeneratorVariables> DecisionTreeClassifier::split_yield (
             );
 
             gen_var.split_kind = "categorical";
-            gen_var.split_idx = categorical_features[index];
+            gen_var.split_idx = yield_params.subsampled_categorical_features[index];
             gen_var.cat_cond = subview_unq.labels[inner_index];
 
             co_yield gen_var;
@@ -266,14 +271,14 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
     splt_yld.subsampled_categorical_features = temp_cat_feat;
 
     if (recursive_max_depth == max_depth) {
-        cout << "[*] Stopping training. Max depth hit" << std::endl;
+        cout << "[*] Stopping training. Max depth hit" << endl;
         best_candidate_var.computed_probs = DecisionTreeClassifier::compute_class_probability(Y);
         auto node = DecisionTreeClassifier::create_node(best_candidate_var, false, true);
         return node;
     }
 
     if (X.n_rows < min_samples_split) {
-        cout << "[*] Stopping training. Min samples split hit" << std::endl;
+        cout << "[*] Stopping training. Min samples split hit" << endl;
         best_candidate_var.computed_probs = DecisionTreeClassifier::compute_class_probability(Y);
         auto node = DecisionTreeClassifier::create_node(best_candidate_var, false, true);
         return node;
@@ -324,8 +329,17 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
         }
     }
 
+    if (!best_candidate_var.num_cond.has_value() && 
+        !best_candidate_var.cat_cond.has_value()
+    ) {
+        cout << "[*] Stopping training! No numerical and categorical feats found." << endl;
+        best_candidate_var.computed_probs = DecisionTreeClassifier::compute_class_probability(Y);
+        auto leaf_node = DecisionTreeClassifier::create_node(best_candidate_var, false, true);
+        return leaf_node;
+    }
+
     if (best_candidate_var.best_gain < min_information_gain) {
-        cout << "[*] Stopping training! Minimum Information Gain hit.";
+        cout << "[*] Stopping training! Minimum Information Gain hit." << endl;
         best_candidate_var.computed_probs = DecisionTreeClassifier::compute_class_probability(Y);
         auto leaf_node = DecisionTreeClassifier::create_node(best_candidate_var, false, true);
         return leaf_node;
@@ -334,7 +348,7 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
     if (best_candidate_var.left_y_vec.n_rows < min_samples_leaf ||
         best_candidate_var.right_y_vec.n_rows < min_samples_leaf
     ) {
-        cout << "[*] Stopping training! Minimum samples split hit.";
+        cout << "[*] Stopping training! Minimum samples split hit." << endl;
         best_candidate_var.computed_probs = DecisionTreeClassifier::compute_class_probability(Y);
         auto leaf_node = DecisionTreeClassifier::create_node(best_candidate_var, false, true);
         return leaf_node;
@@ -454,7 +468,22 @@ vec DecisionTreeClassifier::predict (mat& X) {
 
 #ifndef SKIP_MAIN
 int main () {
-    const std::string dataset_path = "python-utilities/datasets/openml/adult";
+    const string dataset_name = "adult";
+    const string python_utils_path = "python-utilities/datasets/";
+    const string absolute_path = "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/";
+
+    vector<int> num_feats = {};
+    vector<int> cat_feats = {};
+
+    for (int i = 0; i <= 5; i++) {
+        cout << "Appended feature index " << i << endl;
+        num_feats.push_back(i);
+    }
+
+    for (int i = 6; i <= 21; i++) {
+        cout << "Appended feature index " << i << endl;
+        cat_feats.push_back(i);
+    }
 
     DatasetOperations dset_ops;
     DecisionTreeClassifier tree(
@@ -464,15 +493,17 @@ int main () {
         10,
         20,
         30,
-        0.0001
+        0.0001,
+        num_feats,
+        cat_feats
     );
 
     dset_ops.construct_datasets();
     dset_ops.load_datasets(
-        dataset_path + "/train_x.csv",
-        dataset_path + "/train_y.csv",
-        dataset_path + "/test_x.csv",
-        dataset_path + "/test_y.csv"
+        absolute_path + python_utils_path + "openml/" + dataset_name + "/train_x.csv",
+        absolute_path + python_utils_path + "openml/" + dataset_name + "/train_y.csv",
+        absolute_path + python_utils_path + "openml/" + dataset_name + "/test_x.csv",
+        absolute_path + python_utils_path + "openml/" + dataset_name + "/test_y.csv"
     );
 
     mat train_x = std::get<mat>(dset_ops.datasets_vector.at(0));
@@ -484,7 +515,7 @@ int main () {
     vec predictions = tree.predict(test_x);
 
     dset_ops.save_dataset(
-        dataset_path + "/predictions/cpp-predictions.csv",
+        absolute_path + python_utils_path + "openml/" + dataset_name + "/predictions/cpp-predictions.csv",
         predictions
     );
 }

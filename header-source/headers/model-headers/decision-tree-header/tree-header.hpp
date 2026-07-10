@@ -105,9 +105,9 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         float compute_impurity (arma::vec& Y);
         float compute_entropy (arma::vec& Y);
         float compute_information_gain (
-            arma::vec& Y, 
-            arma::vec& left_subset, 
-            arma::vec& right_subset
+            arma::vec& Y,
+            arma::vec& left,
+            arma::vec& right
         );
 
         // Functions that build the tree's node
