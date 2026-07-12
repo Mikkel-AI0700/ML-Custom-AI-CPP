@@ -204,19 +204,23 @@ generator<GeneratorVariables> DecisionTreeClassifier::split_yield (
         ivec temp_int_subview = arma::conv_to<ivec>::from(column_subview);
         UniqueFunctionReturns subview_unq = unique(column_subview, false);
 
-        for (int inner_index = 0; inner_index < subview_unq.labels.size(); inner_index++) {
-            gen_var.left_subset_indices = arma::find(
-                temp_int_subview == subview_unq.labels[inner_index]
-            );
-            gen_var.right_subset_indices = arma::find(
-                temp_int_subview != subview_unq.labels[inner_index]
-            );
+        if (subview_unq.labels.size() < 1) {
+            for (int inner_index = 0; inner_index < subview_unq.labels.size(); inner_index++) {
+                gen_var.left_subset_indices = arma::find(
+                    temp_int_subview == subview_unq.labels[inner_index]
+                );
+                gen_var.right_subset_indices = arma::find(
+                    temp_int_subview != subview_unq.labels[inner_index]
+                );
 
-            gen_var.split_kind = "categorical";
-            gen_var.split_idx = yield_params.subsampled_categorical_features[index];
-            gen_var.cat_cond = subview_unq.labels[inner_index];
+                gen_var.split_kind = "categorical";
+                gen_var.split_idx = yield_params.subsampled_categorical_features[index];
+                gen_var.cat_cond = subview_unq.labels[inner_index];
 
-            co_yield gen_var;
+                co_yield gen_var;
+            }
+        } else {
+            continue;
         }
     }
 }
@@ -329,6 +333,8 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
         }
     }
 
+    // Ambiguous hyperparameter check
+    // Checks if the subsampled features yielded any information
     if (!best_candidate_var.num_cond.has_value() && 
         !best_candidate_var.cat_cond.has_value()
     ) {
@@ -360,6 +366,16 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
         true,
         false
     );
+
+    cout << "Branch depth: " << recursive_max_depth << endl;
+    cout << "Probabilities: " << decision_node->computed_probabilities << endl;
+    cout << "Split index: " << decision_node->split_index << endl;
+
+    if (decision_node->num_condition.has_value()) {
+        cout << "Numerical condition: " << decision_node->num_condition.value() << endl;
+    } else {
+        cout << "Categorical condition: " << decision_node->cat_condition.value() << endl;
+    }
 
     decision_node->left_branch = DecisionTreeClassifier::build_decision_tree(
         best_candidate_var.left_x_mat,

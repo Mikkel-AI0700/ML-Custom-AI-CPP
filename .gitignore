@@ -22,3 +22,5 @@ Thumbs.db
 
 # Datasets
 python-utilities/test-data/classification/adult/
+*.csv
+*.swp
