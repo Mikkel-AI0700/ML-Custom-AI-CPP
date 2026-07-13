@@ -1,4 +1,7 @@
 import argparse
+import os
+import sys
+from pathlib import Path
 from typing import Callable
 import numpy as np
 import pandas as pd
@@ -14,110 +17,134 @@ from sklearn.metrics import (
     v_measure_score
 )
 
-def _determine_run_type (
-    metrics_references_dict: dict[str, Callable],
-    spec_metric: str,
-    test_y: np.ndarray,
-    predictions: np.ndarray,
-    will_run_all: bool = False,
-    will_run_spec: bool = False,
-):
-    test_y = test_y.reshape((-1, 1))
-    predictions = predictions.reshape((-1, 1))
+REGRESSION_METRICS: dict[str, Callable] = {
+    "mse": mean_squared_error,
+    "mae": mean_absolute_error,
+    "r2": r2_score,
+}
 
-    if will_run_all:
-        _run_all_metrics(metrics_references_dict, test_y, predictions)
+CLASSIFICATION_METRICS: dict[str, Callable] = {
+    "accuracy": accuracy_score,
+    "precision": precision_score,
+    "recall": recall_score,
+    "f1": f1_score,
+}
 
-    if will_run_spec:
-        _run_individual(metrics_references_dict, spec_metric, test_y, predictions)
+CLUSTERING_METRICS: dict[str, Callable] = {
+    "silhouette": silhouette_score,
+    "v_measure": v_measure_score,
+}
 
-def _run_all_metrics (
-    metrics_references_dict: dict[str, Callable],
-    test_y: np.ndarray,
-    predictions: np.ndarray
-):
-    for (metric_name, metric_reference) in metrics_references_dict.items():
-        print(f"[+] {metric_name} -> {metric_reference(test_y, predictions)}")
 
-def _run_individual (
-    metrics_references_dict: dict[str, Callable],
-    spec_metric: str,
-    test_y: np.ndarray,
-    predictions: np.ndarray
-):
-    try:
-        if spec_metric not in metrics_references_dict.keys():
-            raise ValueError("[-] Error: User selected metric doesn't exist")
+def _auto_discover_paths(dataset_name: str, dataset_source: str) -> dict[str, str]:
+    base = Path(__file__).resolve().parent.parent / "datasets"
 
-        print(f"{spec_metric} -> {metrics_references_dict.get(spec_metric)(test_y, predictions)}")
-    except ValueError as non_existent_metric:
-        print(non_existent_metric)
-        exit(1)
+    if dataset_source == "auto":
+        if (base / "openml" / dataset_name).is_dir():
+            dataset_source = "openml"
+        elif (base / "synthetic" / dataset_name).is_dir():
+            dataset_source = "synthetic"
+        else:
+            print(f"[-] Error: Dataset '{dataset_name}' not found in openml/ or synthetic/")
+            sys.exit(1)
 
-def main ():
-    regressor_metrics = {
-        "mse": mean_squared_error,
-        "mae": mean_absolute_error,
-        "r2": r2_score
+    dset_dir = base / dataset_source / dataset_name
+    preds_dir = dset_dir / "predictions"
+
+    return {
+        "ground_truth": str(dset_dir / "test_y.csv"),
+        "cpp_predictions": str(preds_dir / "cpp-predictions.csv"),
+        "python_predictions": str(preds_dir / "python-predictions.csv"),
     }
 
-    classification_metrics = {
-        "accuracy": accuracy_score,
-        "precision": precision_score,
-        "recall": recall_score,
-        "fi": f1_score
-    }
 
-    clustering_metrics = {
-        "silhouette": silhouette_score,
-        "vs": v_measure_score
-    }
+def _validate_path(path: str, label: str) -> None:
+    if not os.path.isfile(path):
+        print(f"[-] Error: {label} file not found: {path}")
+        sys.exit(1)
 
-    argp = argparse.ArgumentParser(description="Evaluating the metrics of C++ ML models")
+
+def _load_csv(path: str) -> np.ndarray:
+    return np.genfromtxt(path, delimiter=",").reshape((-1, 1))
+
+
+def _run_side_by_side(
+    metrics: dict[str, Callable],
+    test_y: np.ndarray,
+    cpp_preds: np.ndarray,
+    python_preds: np.ndarray | None,
+    spec_metric: str | None,
+) -> None:
+    metric_names = [spec_metric] if spec_metric else list(metrics.keys())
+
+    header = f"{'Metric':<20} {'Python (sklearn)':<20} {'C++ (custom)':<20} {'Delta':<20}"
+    print(header)
+    print("-" * len(header))
+
+    for name in metric_names:
+        if name not in metrics:
+            print(f"[-] Error: Unknown metric '{name}'")
+            sys.exit(1)
+
+        cpp_val = float(metrics[name](test_y, cpp_preds))
+
+        if python_preds is not None:
+            py_val = float(metrics[name](test_y, python_preds))
+            delta = cpp_val - py_val
+            print(f"{name:<20} {py_val:<20.6f} {cpp_val:<20.6f} {delta:<+20.6f}")
+        else:
+            print(f"{name:<20} {'N/A':<20} {cpp_val:<20.6f} {'N/A':<20}")
+
+
+def main() -> None:
+    argp = argparse.ArgumentParser(description="Side-by-side metric comparison of sklearn vs C++ models")
     argp.add_argument("--metric-type", required=True, dest="metric_type")
-    argp.add_argument("--run-all-metrics", required=False, action="store_true", dest="all_metrics")
-    argp.add_argument("--run-spec-metric", required=False, action="store_true", dest="spec_metrics")
-    argp.add_argument("--spec-metric", required=False, dest="spec_metric")
-    argp.add_argument("--train-data", required=True, dest="test_y")
-    argp.add_argument("--predictions", required=True, dest="predictions")
+    argp.add_argument("--dataset-name", dest="dataset_name", default=None)
+    argp.add_argument("--dataset-source", dest="dataset_source",
+                      choices=["openml", "synthetic", "auto"], default="auto")
+    argp.add_argument("--ground-truth", dest="ground_truth", default=None)
+    argp.add_argument("--cpp-predictions", dest="cpp_predictions", default=None)
+    argp.add_argument("--python-predictions", dest="python_predictions", default=None)
+    argp.add_argument("--run-all-metrics", action="store_true", dest="all_metrics")
+    argp.add_argument("--run-spec-metric", action="store_true", dest="spec_metrics")
+    argp.add_argument("--spec-metric", dest="spec_metric", default=None)
 
-    try:
-        args = argp.parse_args()
+    args = argp.parse_args()
 
-        if not any(args.metric_type == metric for metric in ["regression", "classification", "clustering"]):
-            raise ValueError("[-] Error: Incorrect selected metric type")
+    if args.metric_type == "regression":
+        metrics = REGRESSION_METRICS
+    elif args.metric_type == "classification":
+        metrics = CLASSIFICATION_METRICS
+    elif args.metric_type == "clustering":
+        metrics = CLUSTERING_METRICS
+    else:
+        print(f"[-] Error: Unknown metric type '{args.metric_type}'")
+        sys.exit(1)
 
-        if args.metric_type == "regression":
-            _determine_run_type(
-                regressor_metrics,
-                args.spec_metric,
-                np.genfromtxt(args.test_y, delimiter=","),
-                np.genfromtxt(args.predictions, delimiter=","),
-                args.all_metrics,
-                args.spec_metrics
-            )
+    if args.dataset_name:
+        paths = _auto_discover_paths(args.dataset_name, args.dataset_source)
+        gt_path = paths["ground_truth"]
+        cpp_path = paths["cpp_predictions"]
+        py_path = paths["python_predictions"]
+    else:
+        gt_path = args.ground_truth
+        cpp_path = args.cpp_predictions
+        py_path = args.python_predictions
 
-        if args.metric_type == "classification":
-            _determine_run_type(
-                classification_metrics,
-                args.spec_metric,
-                np.genfromtxt(args.test_y, delimiter=","),
-                np.genfromtxt(args.predictions, delimiter=","),
-                args.all_metrics,
-                args.spec_metrics
-            )
+    if not gt_path:
+        print("[-] Error: No ground truth path. Provide --dataset-name or --ground-truth")
+        sys.exit(1)
 
-        if args.metric_type == "clustering":
-            _determine_run_type(
-                clustering_metrics,
-                args.spec_metric,
-                np.genfromtxt(args.test_y, delimiter=","),
-                np.genfromtxt(args.predictions, delimiter=","),
-                args.all_metrics,
-                args.spec_metrics
-            )
-    except ValueError as incorrect_argument_error:
-        print(incorrect_argument_error)
-        exit(1)
+    _validate_path(gt_path, "Ground truth")
+    _validate_path(cpp_path, "C++ predictions")
 
-main()
+    test_y = _load_csv(gt_path)
+    cpp_preds = _load_csv(cpp_path)
+    python_preds = _load_csv(py_path) if py_path and os.path.isfile(py_path) else None
+
+    spec_metric = args.spec_metric if args.spec_metrics else None
+    _run_side_by_side(metrics, test_y, cpp_preds, python_preds, spec_metric)
+
+
+if __name__ == "__main__":
+    main()

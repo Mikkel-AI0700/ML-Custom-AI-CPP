@@ -25,8 +25,8 @@ function generate_datasets () {
     if [[ "${SKIP_DATA_GENERATION}" != "true" ]]; then
         if [[ -n "${openml_dataset_name}" ]]; then
             local dataset_name="${openml_dataset_name}"
-            local model_test_dir="${python_tld}/${dataset_name}/python-sklearn-test"
-            local predictions_dir="${python_tld}/${dataset_name}/predictions"
+            local model_test_dir="${python_tld}/python-sklearn-test/openml/${dataset_name}"
+            local predictions_dir="${python_tld}/datasets/openml/${dataset_name}/predictions"
 
             mkdir -p "${model_test_dir}" "${predictions_dir}"
             echo "[+] Fetching OpenML dataset: ${openml_dataset_name}"
@@ -35,8 +35,8 @@ function generate_datasets () {
                 --dataset-name "${openml_dataset_name}"
         else
             local dataset_name="${dataset_type_name}"
-            local model_test_dir="${python_tld}/${dataset_name}/python-sklearn-test"
-            local predictions_dir="${python_tld}/${dataset_name}/predictions"
+            local model_test_dir="${python_tld}/python-sklearn-test/synthetic/${dataset_name}"
+            local predictions_dir="${python_tld}/datasets/synthetic/${dataset_name}/predictions"
 
             mkdir -p "${model_test_dir}" "${predictions_dir}"
             echo "[+] Running the generator: ${python_generator_path}"
@@ -51,20 +51,16 @@ function generate_datasets () {
 }
 
 function evaluate_machine_learning_predictions () {
-    local true_data_path="$1"
-    local model_predictions_path="$2"
-    local metric_type_name="$3"
-    local specific_metric_name="$4"
-    local RUN_SPECIFIC_METRICS="$5"
-    local RUN_ALL_METRICS="$6"
+    local metric_type_name="$1"
+    local dataset_name="$2"
+    local specific_metric_name="$3"
+    local RUN_SPECIFIC_METRICS="$4"
+    local RUN_ALL_METRICS="$5"
+    local true_data_override="$6"
+    local predictions_override="$7"
 
     if [[ -z "${PYTHONPATH:-}" && -z "${VIRTUAL_ENV:-}" ]]; then
         echo "[-] Error: Cannot run script when both PYTHONPATH and VIRTUAL_ENV is not set"
-        exit 1
-    fi
-
-    if [[ -z "${true_data_path}" || -z "${model_predictions_path}" ]]; then
-        echo "[-] Error: Both ground truths and predictions path cannot be empty"
         exit 1
     fi
 
@@ -76,13 +72,53 @@ function evaluate_machine_learning_predictions () {
             ;;
     esac
 
-    local true_data_abs_path="${true_data_path}"
-    local predictions_abs_path="${model_predictions_path}"
-    if [[ "${true_data_abs_path}" != /* ]]; then
-        true_data_abs_path="$(pwd)/${true_data_abs_path}"
+    local true_data_path=""
+    local cpp_preds=""
+    local python_preds=""
+
+    if [[ -n "${dataset_name}" ]]; then
+        local source=""
+        if [[ -d "${python_tld}/datasets/openml/${dataset_name}" ]]; then
+            source="openml"
+        elif [[ -d "${python_tld}/datasets/synthetic/${dataset_name}" ]]; then
+            source="synthetic"
+        else
+            echo "[-] Error: Dataset '${dataset_name}' not found in openml/ or synthetic/"
+            exit 1
+        fi
+        local base="${python_tld}/datasets/${source}/${dataset_name}"
+        true_data_path="${base}/test_y.csv"
+        cpp_preds="${base}/predictions/cpp-predictions.csv"
+        python_preds="${base}/predictions/python-predictions.csv"
+    else
+        true_data_path="${true_data_override}"
+        cpp_preds="${predictions_override}"
     fi
-    if [[ "${predictions_abs_path}" != /* ]]; then
-        predictions_abs_path="$(pwd)/${predictions_abs_path}"
+
+    if [[ -z "${true_data_path}" ]]; then
+        echo "[-] Error: Ground truth path is empty. Provide -n <dataset-name> or -T <path>"
+        exit 1
+    fi
+
+    if [[ "${true_data_path}" != /* ]]; then
+        true_data_path="$(pwd)/${true_data_path}"
+    fi
+    if [[ -n "${cpp_preds}" && "${cpp_preds}" != /* ]]; then
+        cpp_preds="$(pwd)/${cpp_preds}"
+    fi
+    if [[ -n "${python_preds}" && "${python_preds}" != /* ]]; then
+        python_preds="$(pwd)/${python_preds}"
+    fi
+
+    local py_args=(
+        --metric-type "${metric_type_name}"
+        --ground-truth "${true_data_path}"
+    )
+    if [[ -n "${cpp_preds}" ]]; then
+        py_args+=( --cpp-predictions "${cpp_preds}" )
+    fi
+    if [[ -n "${python_preds}" ]]; then
+        py_args+=( --python-predictions "${python_preds}" )
     fi
 
     if [[ "${RUN_SPECIFIC_METRICS}" == "true" ]]; then
@@ -90,27 +126,15 @@ function evaluate_machine_learning_predictions () {
             echo "[-] Error: Must provide a specific metric name with -c when using -S"
             exit 1
         fi
-
-        python3 "${python_model_metric_checker}" \
-            --metric-type "${metric_type_name}" \
-            --run-spec-metric \
-            --spec-metric "${specific_metric_name}" \
-            --train-data "${true_data_abs_path}" \
-            --predictions "${predictions_abs_path}"
-        return
+        py_args+=( --run-spec-metric --spec-metric "${specific_metric_name}" )
+    elif [[ "${RUN_ALL_METRICS}" == "true" ]]; then
+        py_args+=( --run-all-metrics )
+    else
+        echo "[-] Error: Must select either -S (specific metric) or -A (all metrics)"
+        exit 1
     fi
 
-    if [[ "${RUN_ALL_METRICS}" == "true" ]]; then
-        python3 "${python_model_metric_checker}" \
-            --metric-type "${metric_type_name}" \
-            --run-all-metrics \
-            --train-data "${true_data_abs_path}" \
-            --predictions "${predictions_abs_path}"
-        return
-    fi
-
-    echo "[-] Error: Must select either -S (specific metric) or -A (all metrics)"
-    exit 1
+    python3 "${python_model_metric_checker}" "${py_args[@]}"
 }
 
 function build_machine_learning_models () {
@@ -148,7 +172,7 @@ function build_machine_learning_models () {
 function display_help () {
     echo "Usage:"
     echo "  ./run-script.sh -G -d <dataset_type> [-n <dataset_name>] [-k <key_value_change>] [-s]"
-    echo "  ./run-script.sh -C -m <metric_type> -T <true_data_path> -P <predictions_path> (-S -c <metric_name> | -A)"
+    echo "  ./run-script.sh -C -m <metric_type> -n <dataset_name> (-S -c <metric_name> | -A)"
     echo "  ./run-script.sh -O [-t]"
     echo
     echo "Modes:"
@@ -166,8 +190,9 @@ function display_help () {
     echo
     echo "Prediction evaluation options (-C):"
     echo "  -m  Metric type: regression | classification | clustering"
-    echo "  -T  Ground truth CSV path (train-data)"
-    echo "  -P  Predictions CSV path"
+    echo "  -n  Dataset name (auto-discovers paths from datasets/openml|synthetic/<name>/)"
+    echo "  -T  Ground truth CSV path (override; requires -P)"
+    echo "  -P  C++ predictions CSV path (override; requires -T)"
     echo "  -S  Run a specific metric (requires -c)"
     echo "  -c  Specific metric name (eg: mse, accuracy)"
     echo "  -A  Run all metrics"
@@ -245,12 +270,13 @@ function main () {
     if $EVALUATE_MACHINE_LEARNING_PREDICTIONS; then
         echo "[+] Passing on the script arguments to model_metric_checker.py"
         evaluate_machine_learning_predictions \
-            "${true_data_path}" \
-            "${model_predictions_path}" \
             "${metric_type_name}" \
+            "${openml_dataset_name}" \
             "${specific_metric_name}" \
             "${RUN_SPECIFIC_METRICS}" \
-            "${RUN_ALL_METRICS}"
+            "${RUN_ALL_METRICS}" \
+            "${true_data_path}" \
+            "${model_predictions_path}"
         exit 0
     fi
 }

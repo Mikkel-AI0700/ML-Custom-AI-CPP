@@ -450,6 +450,7 @@ void DecisionTreeClassifier::fit (mat& X, vec& Y) {
     int recursive_max_depth = 1;
 
     // To prevent overlap of old and new labels
+    // If user fits multiple times
     unique_classes.clear();
     classes_to_index.clear();
 
@@ -484,9 +485,7 @@ vec DecisionTreeClassifier::predict (mat& X) {
 
 #ifndef SKIP_MAIN
 int main () {
-    const string dataset_name = "adult";
-    const string python_utils_path = "python-utilities/datasets/";
-    const string absolute_path = "/home/mikkel/Desktop/ai-projects/machine-learning/custom-ai-cpp/";
+    const string dataset_path = "python-utilities/datasets/openml/adult";
 
     vector<int> num_feats = {};
     vector<int> cat_feats = {};
@@ -516,10 +515,10 @@ int main () {
 
     dset_ops.construct_datasets();
     dset_ops.load_datasets(
-        absolute_path + python_utils_path + "openml/" + dataset_name + "/train_x.csv",
-        absolute_path + python_utils_path + "openml/" + dataset_name + "/train_y.csv",
-        absolute_path + python_utils_path + "openml/" + dataset_name + "/test_x.csv",
-        absolute_path + python_utils_path + "openml/" + dataset_name + "/test_y.csv"
+        dataset_path + "/train_x.csv",
+        dataset_path + "/train_y.csv",
+        dataset_path + "/test_x.csv",
+        dataset_path + "/test_y.csv"
     );
 
     mat train_x = std::get<mat>(dset_ops.datasets_vector.at(0));
@@ -531,7 +530,7 @@ int main () {
     vec predictions = tree.predict(test_x);
 
     dset_ops.save_dataset(
-        absolute_path + python_utils_path + "openml/" + dataset_name + "/predictions/cpp-predictions.csv",
+        dataset_path + "/predictions/cpp-predictions.csv",
         predictions
     );
 }

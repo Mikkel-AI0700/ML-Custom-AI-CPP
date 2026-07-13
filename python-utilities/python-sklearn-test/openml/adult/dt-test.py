@@ -171,6 +171,10 @@ def main():
 
     predictions = dt.predict(X_test)
 
+    preds_dir = dataset_dir / "predictions"
+    preds_dir.mkdir(parents=True, exist_ok=True)
+    pd.Series(predictions, name="target").to_csv(preds_dir / "python-predictions.csv", index=False)
+
 
 if __name__ == "__main__":
     main()
