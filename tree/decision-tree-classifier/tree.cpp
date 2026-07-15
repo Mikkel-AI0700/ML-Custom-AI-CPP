@@ -50,9 +50,12 @@ vec DecisionTreeClassifier::compute_class_probability (vec& Y) {
         prob_vec = arma::zeros(unique_classes.size());
 
         for (int i = 0; i < unq_ret.labels.size(); i++) {
+            float cvtd_label_count = static_cast<float>(unq_ret.label_counts[i]);
+            float cvtd_y_rows = static_cast<float>(Y.n_rows);
+
             if (classes_to_index.contains(unq_ret.labels[i])) {
                 int index = classes_to_index.at(unq_ret.labels[i]);
-                prob_vec.at(index) = static_cast<float>(unq_ret.label_counts[i]) / static_cast<float>(Y.n_rows);
+                prob_vec.at(index) = cvtd_label_count / cvtd_y_rows;
             }
         }
         return prob_vec;
@@ -204,7 +207,7 @@ generator<GeneratorVariables> DecisionTreeClassifier::split_yield (
         ivec temp_int_subview = arma::conv_to<ivec>::from(column_subview);
         UniqueFunctionReturns subview_unq = unique(column_subview, false);
 
-        if (subview_unq.labels.size() < 1) {
+        if (subview_unq.labels.size() >= 2) {
             for (int inner_index = 0; inner_index < subview_unq.labels.size(); inner_index++) {
                 gen_var.left_subset_indices = arma::find(
                     temp_int_subview == subview_unq.labels[inner_index]
@@ -502,13 +505,13 @@ int main () {
 
     DatasetOperations dset_ops;
     DecisionTreeClassifier tree(
-        "gini",
-        10,
-        "sqrt",
-        10,
-        20,
-        30,
-        0.0001,
+        "gini", // Split metric
+        10, // Max depth
+        "sqrt", // Max feature
+        10, // Max leaf nodes
+        20, // Min samples leaf
+        20, // Min samples split
+        0.0001, // Minimum information gain
         num_feats,
         cat_feats
     );

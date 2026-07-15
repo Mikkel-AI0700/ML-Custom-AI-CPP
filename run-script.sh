@@ -58,6 +58,7 @@ function evaluate_machine_learning_predictions () {
     local RUN_ALL_METRICS="$5"
     local true_data_override="$6"
     local predictions_override="$7"
+    local generate_plots="$8"
 
     if [[ -z "${PYTHONPATH:-}" && -z "${VIRTUAL_ENV:-}" ]]; then
         echo "[-] Error: Cannot run script when both PYTHONPATH and VIRTUAL_ENV is not set"
@@ -134,6 +135,10 @@ function evaluate_machine_learning_predictions () {
         exit 1
     fi
 
+    if [[ "${generate_plots}" == "true" ]]; then
+        py_args+=( --plot )
+    fi
+
     python3 "${python_model_metric_checker}" "${py_args[@]}"
 }
 
@@ -196,6 +201,7 @@ function display_help () {
     echo "  -S  Run a specific metric (requires -c)"
     echo "  -c  Specific metric name (eg: mse, accuracy)"
     echo "  -A  Run all metrics"
+    echo "  -p  Generate comparison plot (side-by-side bar chart)"
 }
 
 function main () {
@@ -218,8 +224,9 @@ function main () {
     local specific_metric_name=""
     local RUN_SPECIFIC_METRICS=false
     local RUN_ALL_METRICS=false
+    local GENERATE_PLOTS=false
 
-    local options="GCOhd:n:k:sm:T:P:c:SAt"
+    local options="GCOhd:n:k:sm:T:P:c:SAtp"
 
     while getopts "${options}" option_flag; do
         case "${option_flag}" in
@@ -234,6 +241,7 @@ function main () {
             S) RUN_SPECIFIC_METRICS=true ;;
             A) RUN_ALL_METRICS=true ;;
             c) specific_metric_name="${OPTARG}" ;;
+            p) GENERATE_PLOTS=true ;;
 
             O) BUILD_MACHINE_LEARNING_MODELS=true ;;
             t) BUILD_WITH_TESTS=true ;;
@@ -276,7 +284,8 @@ function main () {
             "${RUN_SPECIFIC_METRICS}" \
             "${RUN_ALL_METRICS}" \
             "${true_data_path}" \
-            "${model_predictions_path}"
+            "${model_predictions_path}" \
+            "${GENERATE_PLOTS}"
         exit 0
     fi
 }

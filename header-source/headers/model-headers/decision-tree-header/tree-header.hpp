@@ -13,11 +13,18 @@
 #include "model_types.hpp"
 
 struct BestCandidateSplit {
+    // Best currently tracked matrices
     arma::mat                                  left_x_mat;
     arma::mat                                  right_x_mat;
+
+    // Best currently tracked vectors
     arma::vec                                  left_y_vec;
     arma::vec                                  right_y_vec;
+
+    // Best currently tracked computed probabilities
     arma::vec                                  computed_probs;
+
+    // Best currently tracked individual split info
     std::optional<float>                       num_cond;
     float                                      best_gain = 0.0f;
     int                                        best_idx;
@@ -25,15 +32,21 @@ struct BestCandidateSplit {
 };
 
 struct SplitYieldParameters {
+    // Initial matrix-vector input
     arma::mat                                  x_feat_mat;
     arma::vec                                  y_target_vec;
+
+    // Subsampled per-recursive call features
     std::vector<int>                           subsampled_numerical_features;
     std::vector<int>                           subsampled_categorical_features;
 };
 
 struct GeneratorVariables {
+    // split_yield extracted indices for non-contiguous extraction
     arma::uvec                                 left_subset_indices;
     arma::uvec                                 right_subset_indices;
+
+    // split_yield conditions, split type and index
     std::string                                split_kind;
     std::optional<float>                       num_cond;
     std::optional<float>                       cat_cond;

@@ -3,7 +3,7 @@ import json
 import argparse
 from pathlib import Path
 from typing import Any
-import pandas as pd
+import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import (
     make_regression,
@@ -16,7 +16,7 @@ def _read_generator_configuration(json_configuration_path: Path):
         dataset_configuration_dict = json.load(config_path)
     return dataset_configuration_dict
 
-def _write_to_file(filepath: Path, X: pd.DataFrame, Y: pd.DataFrame):
+def _write_to_file(filepath: Path, X: np.ndarray, Y: np.ndarray):
     train_x, test_x, train_y, test_y = train_test_split(
         X,
         Y,
@@ -30,8 +30,7 @@ def _write_to_file(filepath: Path, X: pd.DataFrame, Y: pd.DataFrame):
     filenames = ["train_x.csv", "train_y.csv", "test_x.csv", "test_y.csv"]
 
     for dataset, data_filename in zip(generated_datasets, filenames):
-        dataset = pd.DataFrame(dataset)
-        dataset.to_csv(os.path.join(filepath, data_filename), index=False)
+        np.savetxt(os.path.join(filepath, data_filename), dataset, delimiter=",", fmt="%.10g")
 
 def _change_configuration(config_key_value: dict[str, Any], generator_configuration: dict[str, Any]):
     try:
@@ -57,7 +56,7 @@ def create_regression(
     regressor_configuration = _read_generator_configuration(regressor_config)
     _change_configuration(key_value_config, regressor_configuration)
     X, Y = make_regression(**regressor_configuration)
-    _write_to_file(dataset_gen_path, pd.DataFrame(X), pd.DataFrame(Y))
+    _write_to_file(dataset_gen_path, X, Y)
 
 def create_classification(
     dataset_gen_path: Path, 
@@ -67,7 +66,7 @@ def create_classification(
     classification_configuration = _read_generator_configuration(classification_config)
     _change_configuration(key_value_config, classification_configuration)
     X, Y = make_classification(**classification_configuration)
-    _write_to_file(dataset_gen_path, pd.DataFrame(X), pd.DataFrame(Y))
+    _write_to_file(dataset_gen_path, X, Y)
 
 def create_clustering(
     dataset_gen_path: Path, 
@@ -77,7 +76,7 @@ def create_clustering(
     clustering_configuration = _read_generator_configuration(clustering_config)
     _change_configuration(key_value_config, clustering_configuration)
     X, Y = make_blobs(**clustering_configuration)
-    _write_to_file(dataset_gen_path, pd.DataFrame(X), pd.DataFrame(Y))
+    _write_to_file(dataset_gen_path, X, Y)
 
 
 def main():

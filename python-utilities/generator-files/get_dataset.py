@@ -43,10 +43,12 @@ def main() -> None:
         print(f"[-] Error: OpenML Bunch object missing expected attributes: {exc}")
         sys.exit(1)
 
-    df = pd.concat([X, y.to_frame(name="target")], axis=1)
+    # Convert to numpy arrays
+    X_arr = X.to_numpy()
+    y_arr = y.to_numpy()
 
-    numerical_cols = list(df.select_dtypes(include=["number"]).columns)
-    categorical_cols = list(df.select_dtypes(include=["object", "category"]).columns)
+    numerical_cols = list(X.select_dtypes(include=["number"]).columns)
+    categorical_cols = list(X.select_dtypes(include=["object", "category"]).columns)
 
     features_path = target_dir / "features.txt"
     try:
@@ -61,15 +63,15 @@ def main() -> None:
         print(f"[-] Error: Could not write features file '{features_path}': {exc}")
         sys.exit(1)
 
-    stratify = y if dset_type == "classification" else None
+    stratify = y_arr if dset_type == "classification" else None
     try:
         train_x, test_x, train_y, test_y = train_test_split(
-            df.iloc[:, :-1],
-            df.iloc[:, -1],
-            train_size=0.8, 
-            test_size=0.2, 
+            X_arr,
+            y_arr,
+            train_size=0.8,
+            test_size=0.2,
             shuffle=True,
-            random_state=42, 
+            random_state=42,
             stratify=stratify
         )
     except Exception as exc:
@@ -80,13 +82,14 @@ def main() -> None:
     test_x_path = target_dir / "test_x.csv"
     train_y_path = target_dir / "train_y.csv"
     test_y_path = target_dir / "test_y.csv"
-    
+
     generated_datasets = [train_x, test_x, train_y, test_y]
     dataset_paths = [train_x_path, test_x_path, train_y_path, test_y_path]
 
     try:
         for dset, dset_path in zip(generated_datasets, dataset_paths):
-            dset.to_csv(dset_path, index=False)
+            # dset is numpy array; convert to DataFrame for mixed-type saving
+            pd.DataFrame(dset).to_csv(dset_path, index=False, header=False)
     except OSError as exc:
         print(f"[-] Error: Could not write CSV files to '{target_dir}': {exc}")
         sys.exit(1)

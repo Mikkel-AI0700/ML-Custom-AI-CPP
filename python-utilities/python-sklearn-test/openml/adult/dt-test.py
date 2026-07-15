@@ -1,4 +1,5 @@
 from pathlib import Path
+import numpy as np
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.preprocessing import (
@@ -137,33 +138,45 @@ def _write_features_file(dataset_dir: Path,
 def main():
     BASE = Path(__file__).resolve().parent.parent.parent.parent
     dataset_dir = BASE / "datasets" / "openml" / "adult"
-    train_x = pd.read_csv(dataset_dir / "train_x.csv")
-    train_x.columns = train_x.columns.str.strip()
-    test_x = pd.read_csv(dataset_dir / "test_x.csv")
-    test_x.columns = test_x.columns.str.strip()
-    train_y = pd.read_csv(dataset_dir / "train_y.csv")
-    train_y.columns = train_y.columns.str.strip()
-    test_y = pd.read_csv(dataset_dir / "test_y.csv")
-    test_y.columns = test_y.columns.str.strip()
+    
+    # Raw CSVs from get_dataset.py have no headers
+    # Define original column names from the dataset
+    raw_columns = [
+        "age", "workclass", "fnlwgt", "education", "education-num",
+        "marital-status", "occupation", "relationship", "race", "sex",
+        "capitalgain", "capitalloss", "hoursperweek", "native-country"
+    ]
+    
+    train_x = pd.read_csv(dataset_dir / "train_x.csv", header=None, names=raw_columns)
+    test_x = pd.read_csv(dataset_dir / "test_x.csv", header=None, names=raw_columns)
+    train_y = pd.read_csv(dataset_dir / "train_y.csv", header=None, names=["target"])
+    test_y = pd.read_csv(dataset_dir / "test_y.csv", header=None, names=["target"])
 
     X_train, Y_train, bundle = fit_preprocessors(train_x, train_y)
     X_test, Y_test = transform_preprocessors(test_x, test_y, bundle)
 
     _write_features_file(dataset_dir, bundle)
 
-    X_train.to_csv(dataset_dir / "train_x.csv", index=False)
-    pd.Series(Y_train, name="target").to_csv(dataset_dir / "train_y.csv", index=False)
-    X_test.to_csv(dataset_dir / "test_x.csv", index=False)
-    pd.Series(Y_test, name="target").to_csv(dataset_dir / "test_y.csv", index=False)
+    # Save as .npy (binary, no headers, exact shape/dtype)
+    np.save(dataset_dir / "train_x.npy", X_train.to_numpy())
+    np.save(dataset_dir / "train_y.npy", Y_train)
+    np.save(dataset_dir / "test_x.npy", X_test.to_numpy())
+    np.save(dataset_dir / "test_y.npy", Y_test)
+
+    # Also save headerless CSV for C++ compatibility
+    pd.DataFrame(X_train).to_csv(dataset_dir / "train_x.csv", index=False, header=False)
+    pd.Series(Y_train, name="target").to_csv(dataset_dir / "train_y.csv", index=False, header=False)
+    pd.DataFrame(X_test).to_csv(dataset_dir / "test_x.csv", index=False, header=False)
+    pd.Series(Y_test, name="target").to_csv(dataset_dir / "test_y.csv", index=False, header=False)
     
     dt_grid = {
         "criterion": "gini",
         "max_depth": 10,
         "max_features": "sqrt",
-        "max_leaf_nodes": 20,
+        "max_leaf_nodes": 10,
         "min_samples_leaf": 20,
         "min_samples_split": 20,
-        "min_impurity_decrease": 0.001
+        "min_impurity_decrease": 0.0001
     }
 
     dt = DecisionTreeClassifier(**dt_grid)
@@ -173,7 +186,9 @@ def main():
 
     preds_dir = dataset_dir / "predictions"
     preds_dir.mkdir(parents=True, exist_ok=True)
-    pd.Series(predictions, name="target").to_csv(preds_dir / "python-predictions.csv", index=False)
+    # Save as .npy and headerless CSV
+    np.save(preds_dir / "python-predictions.npy", predictions)
+    pd.Series(predictions, name="target").to_csv(preds_dir / "python-predictions.csv", index=False, header=False)
 
 
 if __name__ == "__main__":
