@@ -70,6 +70,33 @@ python-utilities/
 - Hardcoded paths are relative to project root: `"python-utilities/datasets/synthetic/regression"`.
 - Switch datasets by changing the `dataset_path` variable in the C++ source.
 
+## Decision Tree — max_leaf_nodes enforcement
+
+Two approaches have been drafted as GitHub issues for enforcing the
+`max_leaf_nodes` hyperparameter in `DecisionTreeClassifier`:
+
+### #25 — Shared counter in depth-first recursion (merged approach)
+- Pass `int& leaf_node_count` as a reference parameter through
+  `build_decision_tree` and `create_node`, so all recursive branches
+  share the same counter
+- Change the guard from `==` to `>=` and check budget *before* spawning
+  each child call (not just at function entry)
+- Overshoot: 0–1 leaves maximum
+- Keeps recursive structure intact; ~8 lines of changes
+
+### #26 — Iterative BFS worklist (exact enforcement)
+- Replace depth-first recursion with an explicit worklist queue
+  (`running` / `paused` vectors) processing nodes level-by-level
+- After each level, convert all pending nodes to leaves if the budget
+  is exhausted
+- Guarantees exact `max_leaf_nodes` enforcement
+- Larger architectural change; opens door to parallel processing
+
+### Implementation status
+- Decision pending on which approach to implement.
+  See `tree/decision-tree-classifier/tree.cpp` and
+  `header-source/headers/model-headers/decision-tree-header/tree-header.hpp`
+
 # Agent Instructions: ML/AI R&D Assistant
 
 ## Project Philosophy & Scope

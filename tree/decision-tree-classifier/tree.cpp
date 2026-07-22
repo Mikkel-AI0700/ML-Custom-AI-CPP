@@ -249,6 +249,7 @@ unique_ptr<Node> DecisionTreeClassifier::create_node (
     }
 
     if (create_leaf_node) {
+        leaf_node_count++;
         node->is_leaf_node = true;
         node->computed_probabilities = best_candidate_var.computed_probs;
     }
@@ -279,6 +280,13 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
 
     if (recursive_max_depth == max_depth) {
         cout << "[*] Stopping training. Max depth hit" << endl;
+        best_candidate_var.computed_probs = DecisionTreeClassifier::compute_class_probability(Y);
+        auto node = DecisionTreeClassifier::create_node(best_candidate_var, false, true);
+        return node;
+    }
+
+    if (leaf_node_count == max_leaf_nodes) {
+        cout << "[*] Stopping training. Maximum leaf nodes reached" << endl;
         best_candidate_var.computed_probs = DecisionTreeClassifier::compute_class_probability(Y);
         auto node = DecisionTreeClassifier::create_node(best_candidate_var, false, true);
         return node;
@@ -370,6 +378,7 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
         false
     );
 
+    cout << "===== DEBUG =====" << endl;
     cout << "Branch depth: " << recursive_max_depth << endl;
     cout << "Probabilities: " << decision_node->computed_probabilities << endl;
     cout << "Split index: " << decision_node->split_index << endl;

@@ -73,26 +73,26 @@ struct Node {
 
 class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
     public:
-        std::string split_metric;
-        int max_depth;
-        SIDual max_feature;
-        int max_leaf_nodes;
-        int min_samples_leaf;
-        int min_samples_split;
-        float min_information_gain;
-        std::vector<int> numerical_features;
-        std::vector<int> categorical_features;
+        std::string                             split_metric;
+        int                                     max_depth;
+        SIDual                                  max_feature;
+        int                                     max_leaf_nodes;
+        int                                     min_samples_leaf;
+        int                                     min_samples_split;
+        float                                   min_information_gain;
+        std::vector<int>                        numerical_features;
+        std::vector<int>                        categorical_features;
 
         DecisionTreeClassifier(
-            std::string split_metric = "gini",
-            int max_depth = 10,
-            SIDual max_feature = "sqrt",
-            int max_leaf_nodes = 10,
-            int min_samples_leaf = 20,
-            int min_samples_split = 30,
-            float min_information_gain = 1e-5f,
-            std::vector<int> numerical_features = {},
-            std::vector<int> categorical_features = {}
+            std::string                         split_metric = "gini",
+            int                                 max_depth = 10,
+            SIDual                              max_feature = "sqrt",
+            int                                 max_leaf_nodes = 10,
+            int                                 min_samples_leaf = 20,
+            int                                 min_samples_split = 30,
+            float                               min_information_gain = 1e-5f,
+            std::vector<int>                    numerical_features = {},
+            std::vector<int>                    categorical_features = {}
         ): 
             split_metric(split_metric),
             max_depth(max_depth),
@@ -112,6 +112,7 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         std::unique_ptr<Node> root_node;
         std::vector<int> unique_classes;
         std::map<int, int> classes_to_index;
+        int leaf_node_count = 0;
         arma::vec compute_class_probability (arma::vec& Y);
 
         // Math functions to compute impurity and randomness
