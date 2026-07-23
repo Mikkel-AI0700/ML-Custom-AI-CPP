@@ -113,6 +113,8 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
                 math_length = static_cast<int>(sqrt(feature_list.size()));
             } else if (std::get<string>(max_feature) == "log2") {
                 math_length = static_cast<int>(log2(feature_list.size()));
+            } else if (std::get<string>(max_feature) == "none") {
+                math_length = feature_list.size();
             } else {
                 throw runtime_error("Invalid max_feature string provided.");
             }
@@ -278,15 +280,8 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
     splt_yld.subsampled_numerical_features = temp_num_feat;
     splt_yld.subsampled_categorical_features = temp_cat_feat;
 
-    if (recursive_max_depth == max_depth) {
+    if (recursive_max_depth >= max_depth) {
         cout << "[*] Stopping training. Max depth hit" << endl;
-        best_candidate_var.computed_probs = DecisionTreeClassifier::compute_class_probability(Y);
-        auto node = DecisionTreeClassifier::create_node(best_candidate_var, false, true);
-        return node;
-    }
-
-    if (leaf_node_count == max_leaf_nodes) {
-        cout << "[*] Stopping training. Maximum leaf nodes reached" << endl;
         best_candidate_var.computed_probs = DecisionTreeClassifier::compute_class_probability(Y);
         auto node = DecisionTreeClassifier::create_node(best_candidate_var, false, true);
         return node;
@@ -369,39 +364,37 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
         best_candidate_var.computed_probs = DecisionTreeClassifier::compute_class_probability(Y);
         auto leaf_node = DecisionTreeClassifier::create_node(best_candidate_var, false, true);
         return leaf_node;
-
     }
 
-    auto decision_node = DecisionTreeClassifier::create_node(
-        best_candidate_var,
-        true,
-        false
-    );
-
-    cout << "===== DEBUG =====" << endl;
-    cout << "Branch depth: " << recursive_max_depth << endl;
-    cout << "Probabilities: " << decision_node->computed_probabilities << endl;
-    cout << "Split index: " << decision_node->split_index << endl;
-
-    if (decision_node->num_condition.has_value()) {
-        cout << "Numerical condition: " << decision_node->num_condition.value() << endl;
+    // If you're going to ask why this hyperparameter condition check is like this
+    // Go study Decision Tree algorithms сука блять, cyka blyat :)
+    if (leaf_node_count >= max_leaf_nodes) {
+        cout << "[*] Stopping training. Maximum leaf nodes reached" << endl;
+        best_candidate_var.computed_probs = DecisionTreeClassifier::compute_class_probability(Y);
+        auto node = DecisionTreeClassifier::create_node(best_candidate_var, false, true);
+        return node;
     } else {
-        cout << "Categorical condition: " << decision_node->cat_condition.value() << endl;
+        auto decision_node = DecisionTreeClassifier::create_node(
+            best_candidate_var,
+            true,
+            false
+        );
+
+        decision_node->left_branch = DecisionTreeClassifier::build_decision_tree(
+            best_candidate_var.left_x_mat,
+            best_candidate_var.left_y_vec,
+            recursive_max_depth + 1
+        );
+
+        decision_node->right_branch = DecisionTreeClassifier::build_decision_tree(
+            best_candidate_var.right_x_mat,
+            best_candidate_var.right_y_vec,
+            recursive_max_depth + 1
+        );
+        
+        return decision_node;
     }
 
-    decision_node->left_branch = DecisionTreeClassifier::build_decision_tree(
-        best_candidate_var.left_x_mat,
-        best_candidate_var.left_y_vec,
-        recursive_max_depth + 1
-    );
-
-    decision_node->right_branch = DecisionTreeClassifier::build_decision_tree(
-        best_candidate_var.right_x_mat,
-        best_candidate_var.right_y_vec,
-        recursive_max_depth + 1
-    );
-
-    return decision_node;
 }
 
 int DecisionTreeClassifier::traverse_tree_prediction (
@@ -516,7 +509,7 @@ int main () {
     DecisionTreeClassifier tree(
         "gini", // Split metric
         10, // Max depth
-        "sqrt", // Max feature
+        "none", // Max feature
         10, // Max leaf nodes
         20, // Min samples leaf
         20, // Min samples split

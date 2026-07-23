@@ -172,7 +172,7 @@ def main():
     dt_grid = {
         "criterion": "gini",
         "max_depth": 10,
-        "max_features": "sqrt",
+        #"max_features": "sqrt",
         "max_leaf_nodes": 10,
         "min_samples_leaf": 20,
         "min_samples_split": 20,
