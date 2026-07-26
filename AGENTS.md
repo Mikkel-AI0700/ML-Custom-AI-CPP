@@ -2,8 +2,7 @@
 
 ## Quick start
 - Build: `./run-script.sh -O` (or `cmake -S . -B build && cmake --build build`)
-- Generate regression data: `./run-script.sh -G -d regression`
-- Full workflow: generate -> build -> run -> evaluate via `run-script.sh`
+- Full workflow: build -> run -> evaluate via `run-script.sh`
 
 ## Build system
 - CMake >=3.31.6, C++23, **requires Armadillo** (`find_package(Armadillo REQUIRED)`)
@@ -11,14 +10,13 @@
   the linker picks the first one per translation unit order
 - Header search: `header-source/headers/` and subdirs
 
-## Data workflow (Python -> C++ -> Python)
-1. `./run-script.sh -G -d <type>` (regression|classification|clustering) -> sklearn CSVs
-2. Run the C++ exe (paths are hardcoded in each model's `main()`) -> predictions CSV
-3. `./run-script.sh -C -m <type> -T <truth> -P <predictions> (-S -c <metric> | -A)`
+## Data workflow (C++ -> Python)
+1. Run the C++ exe (paths are hardcoded in each model's `main()`) -> predictions CSV
+2. `./run-script.sh -C -m <type> -T <truth> -P <predictions> (-S -c <metric> | -A)`
 
 ## Python environment
 - Venv at `python-utilities/generator-venv/` exists on the `benchmark-tests`
-  branch but **not on master** -- create it or switch branches before `-G`
+  branch but **not on master** -- create it first if missing
 - Dependencies: `scikit-learn pandas numpy`
 - `run-script.sh` auto-sets `PYTHONPATH` and activates venv
 
@@ -32,70 +30,102 @@
 - No test framework (embedded `main()` functions in each model cpp)
 - No linter, formatter, or typechecker configured
 - CSVs loaded/saved with `arma::csv_ascii`
-- Dataset generator params in `python-utilities/json-config-files/<type>/`
+- Datasets are preprocessed, stored under `data/<task>/<dataset_name>/`
 
 ## Directory layout (`python-utilities/`)
 ```
 python-utilities/
 ├── __init__.py
-├── generator-files/               # Data generation scripts
-│   ├── generator.py               #   Synthetic datasets (sklearn)
-│   └── get_dataset.py             #   OpenML dataset fetcher
-├── json-config-files/             # Generator configuration JSONs
-│   └── <type>/                    #   regression, classification, clustering
-│       └── <type>-generator-configuration.json
-├── performance-metric-checkers/   # Metric evaluation scripts
+├── data/                          # Preprocessed training/testing datasets
+│   ├── regression/
+│   │   └── <dataset_name>/
+│   │       ├── features.txt
+│   │       ├── train_x.csv / train_y.csv
+│   │       └── test_x.csv  / test_y.csv
+│   └── classification/
+│       ├── adult/                 # Binary classification (OpenML)
+│       │   ├── features.txt
+│       │   ├── train_x.csv / train_y.csv
+│       │   ├── test_x.csv  / test_y.csv
+│       │   └── predictions/       # Orphaned predictions (legacy)
+│       └── <dataset_name>/
+│           ├── features.txt
+│           ├── train_x.csv / train_y.csv
+│           └── test_x.csv  / test_y.csv
+├── evaluation/                    # Metric evaluation scripts
 │   └── model_metric_checker.py
-├── datasets/
-│   ├── synthetic/<name>/          # Generated datasets (generator.py)
-│   │   ├── train_x.csv / train_y.csv
-│   │   ├── test_x.csv  / test_y.csv
-│   │   └── predictions/
-│   │       ├── cpp-predictions.csv
-│   │       └── python-predictions.csv
-│   └── openml/<name>/             # Fetched datasets (get_dataset.py)
-│       ├── train_x.csv / train_y.csv
-│       ├── test_x.csv  / test_y.csv
-│       ├── features.txt           # [OpenML only]
-│       └── predictions/
-│           ├── cpp-predictions.csv
-│           └── python-predictions.csv
-└── python-sklearn-test/           # Python sklearn test scripts
-    ├── synthetic/<name>/
-    │   └── dt-test.py
-    └── openml/<name>/
-        └── dt-test.py
+├── tests/                         # Python sklearn test scripts
+│   ├── DecisionTreeClassifier/
+│   │   └── dt-test.py
+│   ├── LinearRegression/          # Ready for future tests
+│   └── LogisticRegression/        # Ready for future tests
+├── predictions/                   # Standalone per-algorithm predictions
+│   ├── LinearRegression/          #   (each subdir filled at run-time)
+│   ├── LogisticRegression/
+│   └── DecisionTreeClassifier/
+└── generator-venv/                # Python venv (scikit-learn, pandas, numpy)
 ```
 - **Dataset path** is set via a `const std::string dataset_path` in each model's `main()`.
-- Hardcoded paths are relative to project root: `"python-utilities/datasets/synthetic/regression"`.
+- Hardcoded paths are relative to project root: `"python-utilities/data/regression/<dataset_name>"`.
 - Switch datasets by changing the `dataset_path` variable in the C++ source.
+- Predictions CSV paths should mirror `predictions/<AlgorithmName>/<dataset_name>/cpp-predictions.csv`.
 
 ## Decision Tree — max_leaf_nodes enforcement
 
-Two approaches have been drafted as GitHub issues for enforcing the
-`max_leaf_nodes` hyperparameter in `DecisionTreeClassifier`:
+### Implementation (Issue #25 — Merged)
 
-### #25 — Shared counter in depth-first recursion (merged approach)
-- Pass `int& leaf_node_count` as a reference parameter through
-  `build_decision_tree` and `create_node`, so all recursive branches
-  share the same counter
-- Change the guard from `==` to `>=` and check budget *before* spawning
-  each child call (not just at function entry)
-- Overshoot: 0–1 leaves maximum
-- Keeps recursive structure intact; ~8 lines of changes
+Enforced `max_leaf_nodes` in `DecisionTreeClassifier` using a shared
+counter (`leaf_node_count`, class member incremented in `create_node`)
+and a `>=` guard placed post-split, pre-decision-node within
+`build_decision_tree`.
 
-### #26 — Iterative BFS worklist (exact enforcement)
-- Replace depth-first recursion with an explicit worklist queue
-  (`running` / `paused` vectors) processing nodes level-by-level
-- After each level, convert all pending nodes to leaves if the budget
-  is exhausted
-- Guarantees exact `max_leaf_nodes` enforcement
-- Larger architectural change; opens door to parallel processing
+### Control flow (in order)
 
-### Implementation status
-- Decision pending on which approach to implement.
-  See `tree/decision-tree-classifier/tree.cpp` and
-  `header-source/headers/model-headers/decision-tree-header/tree-header.hpp`
+**Pre-split (entry):**
+1. `recursive_max_depth == max_depth` — stops before splitting at limit
+2. `X.n_rows < min_samples_split` — too few samples to split
+
+**Split loop** — enumerates all candidate feature splits.
+
+**Post-split (after best split found):**
+3. No features found — both `num_cond` and `cat_cond` empty
+4. `best_gain < min_information_gain` — split not informative enough
+5. `min_samples_leaf` — proposed children too small
+6. `leaf_node_count >= max_leaf_nodes` — global leaf budget exhausted
+   → returns leaf
+   `else` → creates decision node + recurses into both children
+
+### What was tried
+
+- **Entry-level `==` guard** — original scaffold. Only fired at exact
+  count; once a sibling subtree jumped past it, never fired again.
+  Overshoot: unbounded.
+- **Entry-level `>=` guard** — better but still wasted a full split-loop
+  iteration on every child that entered after budget exhaustion.
+- **Post-split `>=` guard + `else` block** — the final form. Checking
+  *after* confirming a valid split but *before* allocating a decision
+  node avoids wasting a split loop on children that will immediately
+  become leaves. The `else` naturally captures left/right placement.
+
+### Alternative considered (Issue #26)
+
+An iterative BFS worklist (priority queue) approach was drafted but
+rejected. Depth-first recursion with the `>=` guard bounded overshoot
+to 0–1 leaves in practice, while BFS would have required a full
+recursion rewrite and introduced a different growth strategy.
+
+### Correctness
+
+- `>=` catches the case where a sibling subtree already exhausted the
+  budget (the root cause of the original `==`-only bug)
+- The `else` block naturally routes children as left/right based on the
+  call site that spawned them — no manual branch routing needed
+- `max_depth` uses `==` at entry (stops one level early, per-branch
+  resource); `max_leaf_nodes` uses `>=` post-split (shared resource
+  needs strict enforcement)
+- All other guards (min_samples_split, min_information_gain,
+  min_samples_leaf) are local per-node checks unaffected by sibling
+  state
 
 # Agent Instructions: ML/AI R&D Assistant
 
