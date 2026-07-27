@@ -514,8 +514,8 @@ int main () {
         20, // Min samples leaf
         20, // Min samples split
         0.0001, // Minimum information gain
-        num_feats,
-        cat_feats
+        num_feats, // Numerical features
+        cat_feats // Categorical features
     );
 
     dset_ops.construct_datasets();
