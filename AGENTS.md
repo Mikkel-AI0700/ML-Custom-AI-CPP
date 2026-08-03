@@ -1,74 +1,214 @@
 # AGENTS.md
 
+## Project Overview
+
+From-scratch reimplementation of scikit-learn's core supervised learning
+algorithms in C++23, using Armadillo for linear algebra. Each model is
+benchmarked against its scikit-learn counterpart via Python evaluation
+scripts.
+
+- **Motivation**: Understand ML internals by building from scratch;
+  deepen C++ skills; establish a benchmark baseline against Python.
+- **Sibling repo**: [ML-Custom-AI](https://github.com/anomalyco/ML-Custom-AI)
+  — pure Python reference implementation.
+- **Languages**: C++ (model logic), Python (evaluation, sklearn tests),
+  Bash (`run-script.sh` automation).
+
 ## Quick start
 - Build: `./run-script.sh -O` (or `cmake -S . -B build && cmake --build build`)
 - Full workflow: build -> run -> evaluate via `run-script.sh`
 
-## Build system
+## Architecture
+
+### C++ class hierarchy
+```
+BaseEstimator (virtual: fit, predict, predict_proba, save/load)
+  ├── ClassifierMixin (score: accuracy)
+  ├── RegressorMixin   (score: R²)
+  └── Model classes inherit BaseEstimator + one mixin
+```
+
+All models inherit `BaseEstimator` and parameterize via `HashMapParameters`
+(`std::map<std::string, std::variant<int, float, std::string, bool>>`).
+
+### Build system
 - CMake >=3.31.6, C++23, **requires Armadillo** (`find_package(Armadillo REQUIRED)`)
-- Single executable `CPP_SCIKIT_LEARN`; each model cpp has its own `main()` --
-  the linker picks the first one per translation unit order
-- Header search: `header-source/headers/` and subdirs
+- A static library `CPP_SCIKIT_LEARN_LIBRARIES` aggregates shared code
+  (base classes, loader, linalg ops); each model is a separate executable
+  with its own embedded `main()`.
+- The linker picks one `main()` per translation unit — only the first
+  model source listed in `src/CMakeLists.txt` actually runs.
+- Header search: all subdirs under `header-source/headers/`.
 
-## Data workflow (C++ -> Python)
-1. Run the C++ exe (paths are hardcoded in each model's `main()`) -> predictions CSV
-2. `./run-script.sh -C -m <type> -T <truth> -P <predictions> (-S -c <metric> | -A)`
-
-## Python environment
-- Venv at `python-utilities/generator-venv/` exists on the `benchmark-tests`
-  branch but **not on master** -- create it first if missing
-- Dependencies: `scikit-learn pandas numpy`
-- `run-script.sh` auto-sets `PYTHONPATH` and activates venv
-
-## C++ quirks
-- `TrainTestData` is `std::vector<std::variant<arma::mat, arma::colvec, arma::rowvec>>`
-  -- must `std::get<>` on every access, even when the type is already known
-- All models inherit `BaseEstimator`; params use `HashMapParameters`
-  (`std::map<std::string, std::variant<int, float, std::string, bool>>`)
-
-## Conventions
+### Conventions
 - No test framework (embedded `main()` functions in each model cpp)
 - No linter, formatter, or typechecker configured
 - CSVs loaded/saved with `arma::csv_ascii`
 - Datasets are preprocessed, stored under `data/<task>/<dataset_name>/`
 
-## Directory layout (`python-utilities/`)
+### Key types
+- `TrainTestData` = `std::vector<std::variant<arma::mat, arma::colvec, arma::rowvec>>`
+  — must `std::get<>` on every access, even when the type is already known
+- `HashMapParameters` = `std::map<std::string, variant<int, float, string, bool>>`
+- `SIDual` = `variant<std::string, int>` (used by tree for `max_features`)
+
+## Implemented Models
+
+### 1. LinearRegression
+| Property | Detail |
+|---|---|
+| Inheritance | `BaseEstimator` + `ClassifierMixin` (note: header at `linear-regression.hpp:16` says `ClassifierMixin` — likely a bug; should be `RegressorMixin`) |
+| Algorithm | Gradient descent (full-batch) |
+| Parameters | `epochs` (int), `learning_rate` (float), `fit_intercept` (bool) |
+| Key methods | `fit()` → GD loop; `predict()` → `Xw + b` |
+| Current dataset | `"python-utilities/datasets/synthetic/regression"` (hardcoded in `main()`, line 84) |
+| Source | `linear-regression/source-codes/linear-regression.cpp` |
+
+### 2. LogisticRegression
+| Property | Detail |
+|---|---|
+| Inheritance | `BaseEstimator` + `ClassifierMixin` |
+| Algorithm | Gradient descent with sigmoid activation |
+| Parameters | `epochs` (int), `learning_rate` (float), `fit_intercept` (bool) |
+| Key methods | `fit()` → GD loop over sigmoid(logits); `predict()` → sigmoid(`Xw + b`) |
+| Current dataset | `"python-utilities/datasets/synthetic/classification"` (hardcoded in `main()`, line 103) |
+| Source | `logistic-regression/source-codes/logistic-regression.cpp` |
+
+### 3. DecisionTreeClassifier
+| Property | Detail |
+|---|---|
+| Inheritance | `BaseEstimator` + `ClassifierMixin` |
+| Algorithm | Recursive binary decision tree with configurable split criteria |
+| Parameters | `split_metric` (gini/entropy), `max_depth`, `max_features` (`SIDual`), `max_leaf_nodes`, `min_samples_leaf`, `min_samples_split`, `min_information_gain` |
+| Key methods | `build_decision_tree()` (recursive), C++23 `std::generator` for split enumeration, `traverse_tree_prediction()` for inference |
+| Current dataset | `"python-utilities/datasets/openml/adult"` (hardcoded in `main()`, line 493) |
+| Source | `tree/decision-tree-classifier/tree.cpp` + `tree-header.hpp` |
+| Notes | Tree is built depth-first; `max_leaf_nodes` uses a post-split `>=` guard (see [Decision Tree notes](#decision-tree--max_leaf_nodes_enforcement) below) |
+
+## Data Pipeline
+
+### Workflow (C++ → Python)
+1. C++ executable reads preprocessed CSVs (hardcoded paths in `main()`)
+2. Model runs training + inference, writes predictions CSV
+3. `./run-script.sh -C -m <type> -T <truth> -P <predictions> (-S -c <metric> | -A)`
+
+### Python environment
+- Venv at `python-utilities/generator-venv/` exists on the `benchmark-tests`
+  branch but **not on master** — create it first if missing
+- Dependencies: `scikit-learn pandas numpy`
+- `run-script.sh` auto-sets `PYTHONPATH` and activates venv
+
+### Project layout
 ```
-python-utilities/
-├── __init__.py
-├── data/                          # Preprocessed training/testing datasets
-│   ├── regression/
-│   │   └── <dataset_name>/
-│   │       ├── features.txt
-│   │       ├── train_x.csv / train_y.csv
-│   │       └── test_x.csv  / test_y.csv
-│   └── classification/
-│       ├── adult/                 # Binary classification (OpenML)
-│       │   ├── features.txt
-│       │   ├── train_x.csv / train_y.csv
-│       │   ├── test_x.csv  / test_y.csv
-│       │   └── predictions/       # Orphaned predictions (legacy)
-│       └── <dataset_name>/
-│           ├── features.txt
-│           ├── train_x.csv / train_y.csv
-│           └── test_x.csv  / test_y.csv
-├── evaluation/                    # Metric evaluation scripts
-│   └── model_metric_checker.py
-├── tests/                         # Python sklearn test scripts
-│   ├── DecisionTreeClassifier/
-│   │   └── dt-test.py
-│   ├── LinearRegression/          # Ready for future tests
-│   └── LogisticRegression/        # Ready for future tests
-├── predictions/                   # Standalone per-algorithm predictions
-│   ├── LinearRegression/          #   (each subdir filled at run-time)
-│   ├── LogisticRegression/
-│   └── DecisionTreeClassifier/
-└── generator-venv/                # Python venv (scikit-learn, pandas, numpy)
+.
+├── AGENTS.md                          # This file
+├── CMakeLists.txt                     # Root CMake (C++23, Armadillo, optional GTest)
+├── README.md
+├── run-script.sh                      # Build/run/evaluate automation
+├── .gitignore
+├── header-source/
+│   ├── headers/
+│   │   ├── base-headers/              # BaseEstimator, ClassifierMixin, RegressorMixin
+│   │   ├── complex-datatypes/         # HashMapParameters, TrainTestData, SIDual
+│   │   ├── cpp-utilities/             # loader.hpp, linalg-operations.hpp
+│   │   ├── model-headers/             # Per-model headers (decision-tree, lr, logr)
+│   │   ├── metrics/                   # (empty)
+│   │   ├── armadillo/                 # Bundled Armadillo tarball
+│   │   └── validators/                # (empty)
+│   └── header-source-files/
+│       ├── base-source-files/         # .cpp for base classes + mixins
+│       └── cpp-utilities-source-files/ # loader.cpp, linalg-operations.cpp
+├── src/
+│   └── CMakeLists.txt                 # Static lib + 3 model executables
+├── linear-regression/
+│   └── source-codes/linear-regression.cpp
+├── logistic-regression/
+│   └── source-codes/logistic-regression.cpp
+├── tree/
+│   └── decision-tree-classifier/tree.cpp
+├── tests/                             # GTest unit tests (optional, -DBUILD_TESTS=ON)
+│   ├── CMakeLists.txt
+│   └── decision_tree_classifier_test.cpp
+├── validators/
+│   └── dataset_validator.cpp
+├── performance-metrics/
+│   └── decision-tree/                 # Generated bar-chart PNGs
+├── python-utilities/                  # Python data, evaluation, test scripts
+│   ├── __init__.py
+│   ├── data/
+│   │   ├── regression/
+│   │   │   └── <dataset_name>/
+│   │   │       ├── features.txt
+│   │   │       ├── train_x.csv / train_y.csv
+│   │   │       └── test_x.csv  / test_y.csv
+│   │   └── classification/
+│   │       ├── adult/                 # Binary classification (OpenML)
+│   │       │   ├── features.txt
+│   │       │   ├── train_x.csv / train_y.csv
+│   │       │   ├── test_x.csv  / test_y.csv
+│   │       │   └── predictions/       # Orphaned predictions (legacy)
+│   │       └── <dataset_name>/
+│   │           ├── features.txt
+│   │           ├── train_x.csv / train_y.csv
+│   │           └── test_x.csv  / test_y.csv
+│   ├── evaluation/                    # Metric evaluation scripts
+│   │   └── model_metric_checker.py
+│   ├── tests/                         # Python sklearn test scripts
+│   │   ├── DecisionTreeClassifier/
+│   │   │   └── dt-test.py
+│   │   ├── LinearRegression/
+│   │   └── LogisticRegression/
+│   ├── predictions/                   # Standalone per-algorithm predictions
+│   │   ├── LinearRegression/
+│   │   ├── LogisticRegression/
+│   │   └── DecisionTreeClassifier/
+│   └── generator-venv/                # Python venv (gitignored)
+├── build/                             # CMake build dir (gitignored)
+├── errors/                            # (empty)
+└── metrics/                           # (empty)
 ```
 - **Dataset path** is set via a `const std::string dataset_path` in each model's `main()`.
-- Hardcoded paths are relative to project root: `"python-utilities/data/regression/<dataset_name>"`.
 - Switch datasets by changing the `dataset_path` variable in the C++ source.
 - Predictions CSV paths should mirror `predictions/<AlgorithmName>/<dataset_name>/cpp-predictions.csv`.
+
+### Evaluation
+- `evaluation/model_metric_checker.py` compares C++ predictions against
+  sklearn ground truth and computes metrics (MSE, MAE, R² for regression;
+  accuracy, precision, recall, F1 for classification; silhouette, V-measure
+  for clustering).
+- `tests/<Algorithm>/` contains Python scripts that train sklearn's
+  implementation on the same dataset and save predictions, enabling
+  side-by-side comparison.
+
+## Recent changes (July 2026)
+
+The `python-utilities/` directory was restructured from a dual-origin
+layout (synthetic + OpenML) with inline generation scripts to a flat,
+preprocessed-only layout.
+
+### Deleted
+- `generator-files/` — synthetic generator (`generator.py`) and OpenML
+  fetcher (`get_dataset.py`)
+- `json-config-files/` — generator parameter configs
+- `datasets/synthetic/` — regression and classification data
+- `datasets/openml/regression/` — empty
+- `.npy` binary duplicates from the adult dataset
+
+### Moved / Renamed
+- `datasets/openml/adult/` → `data/classification/adult/`
+- `performance-metric-checkers/` → `evaluation/`
+- `python-sklearn-test/` → `tests/` (flattened into per-algorithm subdirs)
+- `python-sklearn-test/openml/adult/dt-test.py` → `tests/DecisionTreeClassifier/dt-test.py`
+
+### Created
+- `data/regression/`, `data/classification/adult/` — preprocessed dataset homes
+- `predictions/` — standalone top-level directory with per-algorithm subdirs
+- `tests/LinearRegression/`, `tests/LogisticRegression/` — ready for future tests
+
+### C++ paths — NOT YET UPDATED
+All three model `main()` functions still use the old hardcoded paths
+(e.g. `"python-utilities/datasets/synthetic/regression"`). These must be
+updated to reflect the new layout before the models will run correctly.
 
 ## Decision Tree — max_leaf_nodes enforcement
 

@@ -31,6 +31,28 @@ using arma::vec;
 using arma::ivec;
 using arma::uvec;
 
+DecisionTreeClassifier::DecisionTreeClassifier(
+    string                              split_metric,
+    int                                 max_depth,
+    SIDual                              max_feature,
+    int                                 max_leaf_nodes,
+    int                                 min_samples_leaf,
+    int                                 min_samples_split,
+    float                               min_information_gain,
+    vector<int>                         numerical_features,
+    vector<int>                         categorical_features
+):
+    split_metric(split_metric),
+    max_depth(max_depth),
+    max_feature(max_feature),
+    max_leaf_nodes(max_leaf_nodes),
+    min_samples_leaf(min_samples_leaf),
+    min_samples_split(min_samples_split),
+    min_information_gain(min_information_gain),
+    numerical_features(numerical_features),
+    categorical_features(categorical_features)
+{}
+
 vec DecisionTreeClassifier::compute_class_probability (vec& Y) {
     vector<int> labels;
     vector<int> label_counts;

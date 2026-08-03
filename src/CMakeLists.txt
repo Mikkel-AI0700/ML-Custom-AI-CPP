@@ -14,6 +14,7 @@ set(
     DecisionTreeClassifier
     LinearRegression
     LogisticRegression
+    RandomForestClassifier
 )
 
 set(
@@ -21,6 +22,7 @@ set(
     ${CMAKE_SOURCE_DIR}/tree/decision-tree-classifier/tree.cpp
     ${CMAKE_SOURCE_DIR}/linear-regression/source-codes/linear-regression.cpp
     ${CMAKE_SOURCE_DIR}/logistic-regression/source-codes/logistic-regression.cpp
+    ${CMAKE_SOURCE_DIR}/ensemble/random-forest-classifier/random-forest-classifier.cpp
 )
 
 list(LENGTH MODEL_EXECUTABLES NUM_MODELS)
@@ -47,5 +49,6 @@ target_include_directories(
     ${CMAKE_SOURCE_DIR}/header-source/headers/model-headers/decision-tree-header
     ${CMAKE_SOURCE_DIR}/header-source/headers/model-headers/linear-regression-header
     ${CMAKE_SOURCE_DIR}/header-source/headers/model-headers/logistic-regression-header
+    ${CMAKE_SOURCE_DIR}/header-source/headers/model-headers/random-forest-header
     ${ARMADILLO_INCLUDE_DIRS}
 )

@@ -93,17 +93,7 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
             float                               min_information_gain = 1e-5f,
             std::vector<int>                    numerical_features = {},
             std::vector<int>                    categorical_features = {}
-        ): 
-            split_metric(split_metric),
-            max_depth(max_depth),
-            max_feature(max_feature),
-            max_leaf_nodes(max_leaf_nodes),
-            min_samples_leaf(min_samples_leaf),
-            min_samples_split(min_samples_split),
-            min_information_gain(min_information_gain),
-            numerical_features(numerical_features),
-            categorical_features(categorical_features)
-        {}
+        );
 
         void fit (arma::mat& X, arma::vec& Y) override;
         arma::vec predict (arma::mat& X) override;
