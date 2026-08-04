@@ -2,6 +2,7 @@
 #include <random>
 #include <memory>
 #include <vector>
+#include <variant>
 #include <random>
 #include <optional>
 #include <generator>
@@ -20,34 +21,33 @@ using std::unique_ptr;
 using std::optional;
 using std::generator;
 using std::map;
+using std::variant;
+using std::find;
 using std::random_device;
 using std::mt19937;
 using std::uniform_int_distribution;
+using std::invalid_argument;
 
 using arma::mat;
 using arma::vec;
 using arma::rowvec;
 
-// ──────────────────────────────────────────────
-// Constructor
-// ──────────────────────────────────────────────
-
 RandomForestClassifier::RandomForestClassifier(
-    int                    n_estimators,
-    string                 criterion,
-    int                    max_depth,
-    SIDual                 max_features,
-    int                    max_leaf_nodes,
-    int                    min_samples_leaf,
-    int                    min_samples_split,
-    float                  min_information_gain,
-    bool                   bootstrap,
-    bool                   oob_score,
-    optional<float>        max_samples,
-    int                    random_state,
-    int                    verbose,
-    vector<int>            numerical_features,
-    vector<int>            categorical_features
+    int                                            n_estimators,
+    string                                         criterion,
+    int                                            max_depth,
+    optional<variant<int, string>>                 max_features,
+    int                                            max_leaf_nodes,
+    int                                            min_samples_leaf,
+    int                                            min_samples_split,
+    float                                          min_information_gain,
+    bool                                           bootstrap,
+    bool                                           oob_score,
+    optional<float>                                max_samples,
+    int                                            random_state,
+    int                                            verbose,
+    vector<int>                                    numerical_features,
+    vector<int>                                    categorical_features
 ):
     n_estimators(n_estimators),
     criterion(criterion),
@@ -68,12 +68,28 @@ RandomForestClassifier::RandomForestClassifier(
     oob_score_(0.0f)
 {}
 
-generator<BootstrappedDataset> RandomForestClassifier::build_bootstrap (
-    const mat& X,
-    vector<int> feature_vector
+vector<int> RandomForestClassifier::bootstrap_features (
+    int bootstrapped_feature_count,
+    vector<int> feature_vector,
+    mt19937& mt_generator
 ) {
-    BootstrappedDataset bsd;
+    vector<int> temp_bsd_feats;
+    uniform_int_distribution<int> uid_feat_generator(1, feature_vector.size());
 
+    while (temp_bsd_feats.size() != bootstrapped_feature_count) {
+        int bsd_generated_number = uid_feat_generator(mt_generator);
+        temp_bsd_feats.push_back(uid_feat_generator(mt_generator));
+    }
+
+    return temp_bsd_feats;
+}
+
+generator<BootstrappedDataset> RandomForestClassifier::bootstrap_dataset (
+    const mat& X,
+    vector<int> feature_vector,
+    BootstrappedDataset& bsd
+) {
+    
     if (bootstrap) {
         random_device rd;
         mt19937 mt_generator(rd());
@@ -94,9 +110,9 @@ generator<BootstrappedDataset> RandomForestClassifier::build_bootstrap (
             // Processing of max features to bootstrap
             if (max_features.has_value()) {
                 if (std::holds_alternative<int>(max_features.value())) {
-                    cvtd_bootstrapped_samples = std::get<int>(max_features.value());
+                    cvtd_bootstrapped_feats = std::get<int>(max_features.value());
                 } else if (std::holds_alternative<float>(max_features.value())) {
-                    cvtd_bootstrapped_samples = static_cast<int>(
+                    cvtd_bootstrapped_feats = static_cast<int>(
                         std::get<float>(max_features.value())
                     );
                 } else if (std::get<string>(max_features.value()) == "sqrt") {
@@ -108,15 +124,30 @@ generator<BootstrappedDataset> RandomForestClassifier::build_bootstrap (
                         log2(feature_vector.size())
                     );
                 } else {
-
+                    throw invalid_argument("[-] Incorrect argument selection. Exiting!");
                 }
             }
-        } catch () {
 
+            // Generating the bootstrapped dataset and features.
+            bsd.bootstrapped_numerical_features = RandomForestClassifier::bootstrap_features(
+                cvtd_bootstrapped_feats,
+                numerical_features,
+                mt_generator
+            );
+            bsd.bootstrapped_categorical_features = RandomForestClassifier::bootstrap_features(
+                cvtd_bootstrapped_feats,
+                categorical_features,
+                mt_generator
+            );
+
+            co_yield bsd;
+        } catch (invalid_argument& incorrect_argument_selection) {
+            cout << incorrect_argument_selection.what() << endl;
+            co_return;
         }
     } else {
         cout << "[*] Bootstrapping disabled." << endl;
-        return;
+        co_return;
     }
 }
 

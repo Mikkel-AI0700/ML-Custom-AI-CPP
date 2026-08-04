@@ -30,15 +30,15 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
         int                                                        verbose;
 
         // ── DecisionTree pass-through hyperparameters ──
-        std::string                             criterion;
-        int                                     max_depth;
-        std::optional<SIDual>                  max_features;
-        int                                     max_leaf_nodes;
-        int                                     min_samples_leaf;
-        int                                     min_samples_split;
-        float                                   min_information_gain;
-        std::vector<int>                        numerical_features;
-        std::vector<int>                        categorical_features;
+        std::string                                                criterion;
+        int                                                        max_depth;
+        std::optional<std::variant<int, string>>                   max_features;
+        int                                                        max_leaf_nodes;
+        int                                                        min_samples_leaf;
+        int                                                        min_samples_split;
+        float                                                      min_information_gain;
+        std::vector<int>                                           numerical_features;
+        std::vector<int>                                           categorical_features;
 
         // ── Learned state ──
         std::vector<int>                        unique_classes;
@@ -48,7 +48,7 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
             int                                 n_estimators = 100,
             std::string                         criterion = "gini",
             int                                 max_depth = 10,
-            SIDual                              max_features = "sqrt",
+            std::optional<std::variant<int, string>>                              max_features = "sqrt",
             int                                 max_leaf_nodes = 10,
             int                                 min_samples_leaf = 20,
             int                                 min_samples_split = 30,
@@ -71,14 +71,20 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
         std::mt19937                            rng;
         std::map<int, int>                      classes_to_index;
 
+        std::vector<int> bootstrap_features (
+            int bootstrapped_feature_limit,
+            std::vector<int> feature_vector,
+            std::mt19937& mt_generator
+        );
+        std::generator<BootstrappedDataset> bootstrap_dataset (
+            const arma::mat& X,
+            std::vector<int> feature_vector,
+            BootstrappedDataset& bsd
+        );
         arma::mat build_forest (
             const arma::mat& X,
             const arma::vec& Y,
             arma::vec& out_y
-        );
-        std::generator<BootstrappedDataset> build_bootstrap (
-            const arma::mat& X,
-            std::vector<int> feature_vector
         );
         int majority_vote (const std::vector<int>& tree_preds);
         arma::rowvec average_probabilities (

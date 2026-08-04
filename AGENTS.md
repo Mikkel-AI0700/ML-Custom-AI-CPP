@@ -1,5 +1,7 @@
 # AGENTS.md
 
+# ML-CUSTOM-AI-CPP
+
 ## Project Overview
 
 From-scratch reimplementation of scikit-learn's core supervised learning
@@ -266,6 +268,52 @@ recursion rewrite and introduced a different growth strategy.
 - All other guards (min_samples_split, min_information_gain,
   min_samples_leaf) are local per-node checks unaffected by sibling
   state
+
+# Day summary
+
+## RandomForestClassifier — bootstrap sampling review (Option A)
+
+Audited `bootstrap_features`/`bootstrap_dataset` in
+`ensemble/random-forest-classifier/random-forest-classifier.cpp` and the
+header `random-forest-classifier.hpp`. Adopted **Option A**: draw a random
+position in `[0, pool.size())`, take the value at that position, and append
+to the output — no membership/find needed since positions are always valid.
+- Sampling is **without replacement** (distinct picks) via
+  swap-with-end + shrink boundary (no erase/shift/resize).
+- `pool.size()` is the **domain**; `feature_limit` (derived from
+  `max_features`) is the **subsample count** — both coexist.
+- The obsolete `column_count` parameter is slated for removal.
+
+### Bug-fix status
+- **Fixed**: dedup check (C), `X.n_rows` → `X.n_cols` (B, both call sites),
+  wrong-variable overwrite (G), `build_bootstrap` → `bootstrap_dataset`
+  rename (both files).
+- **Unfixed**: index-0 unreachable (A — `uid_feat_generator(1, ...)`
+  starts at 1), rejection loop (D), `column_count` removal (E).
+- **New regressions**: R1 (loop reads `std::get<int>(max_features)` ignoring
+  the `feature_limit` parameter), R2 (throws `bad_variant_access` on the
+  default `"sqrt"`), R3 (string branches bypassed).
+- **Blockers**: H (dead `holds_alternative<float>` / `get<float>` branch on
+  `SIDual` = `variant<string,int>` → compile error), I (uncaught
+  `bad_optional_access` when `max_samples` is nullopt, should default to
+  `X.n_rows`), and a `max_samples` type mismatch (ctor `optional<float>` vs
+  member `optional<variant<int,float>>`).
+- **Deferred**: full bootstrapped `bootstrapped_X`/`bootstrapped_Y` logic,
+  struct-grouping suggestion, and all crop of TODO functions (`fit`,
+  `predict`, etc.).
+
+### Armadillo `submat`/`subvec` finding
+The scalar `submat(r1,c1,r2,c2)` and `subvec(first,last)` forms are
+**contiguous-only**; `submat(span, span)` allows only fixed-stride spans.
+The **index-vector** overloads — `X.rows(uvec)`, `X.cols(uvec)`,
+`X.submat(uvec_rows, uvec_cols)` (returns `subview_elem2`) — accept
+arbitrary **non-contiguous** (even repeated) indices and are the correct
+forms for the future `bootstrapped_X`/`bootstrapped_Y` (with the
+`std::vector<int>` → `uvec` conversion noted).
+
+### AGENTS.md structural edits
+- Added the `# ML-CUSTOM-AI-CPP` top-level heading.
+- Added this `# Day summary` section.
 
 # Agent Instructions: ML/AI R&D Assistant
 

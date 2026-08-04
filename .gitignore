@@ -1,6 +1,16 @@
 # Build artifacts
 build/
 
+# CMake build artifacts (in repo root)
+/CMakeCache.txt
+/CMakeFiles/
+/Makefile
+/cmake_install.cmake
+/compile_commands.json
+/src/CMakeFiles/
+/src/Makefile
+/src/cmake_install.cmake
+
 # IDE files
 .idea/
 .vscode/
