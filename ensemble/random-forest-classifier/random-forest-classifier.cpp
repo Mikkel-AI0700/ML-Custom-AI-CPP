@@ -13,6 +13,7 @@
 #include "random-forest-classifier.hpp"
 #include "linalg-operations.hpp"
 
+// Standard C++ STL
 using std::endl;
 using std::cout;
 using std::string;
@@ -28,9 +29,10 @@ using std::mt19937;
 using std::uniform_int_distribution;
 using std::invalid_argument;
 
+// Armadillo
 using arma::mat;
 using arma::vec;
-using arma::rowvec;
+using arma::uvec;
 
 RandomForestClassifier::RandomForestClassifier(
     int                                            n_estimators,
@@ -68,6 +70,22 @@ RandomForestClassifier::RandomForestClassifier(
     oob_score_(0.0f)
 {}
 
+variant<vec, mat> RandomForestClassifier::bootstrap_dataset (
+    const std::variant<mat, vec>& dataset,
+    const uvec non_contiguous_indices,
+    const mt19937& mt_generator
+) {
+    if (std::holds_alternative<mat>(dataset)) {
+        mat temp_selected_matrix = std::get<mat>(dataset).rows(non_contiguous_indices);
+        return temp_selected_matrix;
+    }
+
+    if (std::holds_alternative<vec>(dataset)) {
+        vec temp_selected_vector = std::get<vec>(dataset).rows(non_contiguous_indices);
+        return temp_selected_vector;
+    }
+}
+
 vector<int> RandomForestClassifier::bootstrap_features (
     int bootstrapped_feature_count,
     vector<int> feature_vector,
@@ -78,7 +96,18 @@ vector<int> RandomForestClassifier::bootstrap_features (
 
     while (temp_bsd_feats.size() != bootstrapped_feature_count) {
         int bsd_generated_number = uid_feat_generator(mt_generator);
-        temp_bsd_feats.push_back(uid_feat_generator(mt_generator));
+
+        auto bsd_num_location = find(
+            temp_bsd_feats.begin(),
+            temp_bsd_feats.end(),
+            bsd_generated_number
+        );
+
+        if (bsd_num_location != temp_bsd_feats.end()) {
+            temp_bsd_feats.push_back(bsd_generated_number);
+        } else {
+            continue;
+        }
     }
 
     return temp_bsd_feats;
@@ -194,13 +223,13 @@ vec RandomForestClassifier::predict (mat& X) {
 // predict_proba  —  TODO: implement probability averaging
 // ──────────────────────────────────────────────
 
-rowvec RandomForestClassifier::predict_proba (mat& X) {
+vec RandomForestClassifier::predict_proba (mat& X) {
     // TODO:
     //   For each tree, collect probability rowvectors
     //   Average them element-wise across all trees
     //   Return averaged probability rowvector
 
-    return rowvec();
+    return vec();
 }
 
 // ──────────────────────────────────────────────
@@ -220,14 +249,14 @@ int RandomForestClassifier::majority_vote (const vector<int>& tree_preds) {
 // average_probabilities  —  TODO: implement averaging
 // ──────────────────────────────────────────────
 
-rowvec RandomForestClassifier::average_probabilities (
-    const vector<rowvec>& all_probs
+vec RandomForestClassifier::average_probabilities (
+    const vector<vec>& all_probs
 ) {
     // TODO:
     //   Sum all rowvecs element-wise, divide by n_estimators
     //   Return the averaged probability vector
 
-    return rowvec();
+    return vec();
 }
 
 // ──────────────────────────────────────────────

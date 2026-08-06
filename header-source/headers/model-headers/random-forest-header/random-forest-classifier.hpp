@@ -64,13 +64,18 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
 
         void fit (arma::mat& X, arma::vec& Y) override;
         arma::vec predict (arma::mat& X) override;
-        arma::rowvec predict_proba (arma::mat& X) override;
+        arma::vec predict_proba (arma::mat& X) override;
 
     private:
         std::vector<std::unique_ptr<DecisionTreeClassifier>> trees;
         std::mt19937                            rng;
         std::map<int, int>                      classes_to_index;
 
+        std::variant<arma::vec, arma::mat> bootstrap_dataset (
+            const std::variant<arma::mat, arma::vec>& dataset,
+            const arma::uvec non_contiguous_indices,
+            const mt19937& mt_generator
+        );
         std::vector<int> bootstrap_features (
             int bootstrapped_feature_limit,
             std::vector<int> feature_vector,
@@ -87,7 +92,7 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
             arma::vec& out_y
         );
         int majority_vote (const std::vector<int>& tree_preds);
-        arma::rowvec average_probabilities (
-            const std::vector<arma::rowvec>& all_probs
+        arma::vec average_probabilities (
+            const std::vector<arma::vec>& all_probs
         );
 };
