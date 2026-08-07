@@ -35,21 +35,21 @@ using arma::vec;
 using arma::uvec;
 
 RandomForestClassifier::RandomForestClassifier(
-    int                                            n_estimators,
-    string                                         criterion,
-    int                                            max_depth,
-    optional<variant<int, string>>                 max_features,
-    int                                            max_leaf_nodes,
-    int                                            min_samples_leaf,
-    int                                            min_samples_split,
-    float                                          min_information_gain,
-    bool                                           bootstrap,
-    bool                                           oob_score,
-    optional<float>                                max_samples,
-    int                                            random_state,
-    int                                            verbose,
-    vector<int>                                    numerical_features,
-    vector<int>                                    categorical_features
+    int                               n_estimators,
+    string                            criterion,
+    int                               max_depth,
+    optional<variant<int, string>>    max_features,
+    int                               max_leaf_nodes,
+    int                               min_samples_leaf,
+    int                               min_samples_split,
+    float                             min_information_gain,
+    bool                              bootstrap,
+    bool                              oob_score,
+    optional<float>                   max_samples,
+    int                               random_state,
+    int                               verbose,
+    vector<int>                       numerical_features,
+    vector<int>                       categorical_features
 ):
     n_estimators(n_estimators),
     criterion(criterion),
@@ -70,26 +70,25 @@ RandomForestClassifier::RandomForestClassifier(
     oob_score_(0.0f)
 {}
 
-variant<vec, mat> RandomForestClassifier::bootstrap_dataset (
+variant<mat, vec> RandomForestClassifier::create_bootstrap_dataset (
     const std::variant<mat, vec>& dataset,
-    const uvec non_contiguous_indices,
+    const int subsampled_max_samples,
+    const vector<int> subsampled_features,
     const mt19937& mt_generator
 ) {
-    if (std::holds_alternative<mat>(dataset)) {
-        mat temp_selected_matrix = std::get<mat>(dataset).rows(non_contiguous_indices);
-        return temp_selected_matrix;
-    }
+    // Need to get non-contiguous row and column indices for matrix
+    // Numerical features get different sets of rows and columns
+    // Same goes for categorical features
+    // The entire function needs to be feature, sample, and dataset agnostic
 
-    if (std::holds_alternative<vec>(dataset)) {
-        vec temp_selected_vector = std::get<vec>(dataset).rows(non_contiguous_indices);
-        return temp_selected_vector;
-    }
-}
+    // Use the already bootstrapped features as function parameter
+    // Now the return type is the problem
+}   
 
-vector<int> RandomForestClassifier::bootstrap_features (
-    int bootstrapped_feature_count,
+vector<int> RandomForestClassifier::create_bootstrap_features (
+    const int bootstrapped_feature_count,
     vector<int> feature_vector,
-    mt19937& mt_generator
+    const mt19937& mt_generator
 ) {
     vector<int> temp_bsd_feats;
     uniform_int_distribution<int> uid_feat_generator(1, feature_vector.size());
@@ -103,7 +102,7 @@ vector<int> RandomForestClassifier::bootstrap_features (
             bsd_generated_number
         );
 
-        if (bsd_num_location != temp_bsd_feats.end()) {
+        if (bsd_num_location == temp_bsd_feats.end()) {
             temp_bsd_feats.push_back(bsd_generated_number);
         } else {
             continue;
@@ -157,17 +156,27 @@ generator<BootstrappedDataset> RandomForestClassifier::bootstrap_dataset (
                 }
             }
 
-            // Generating the bootstrapped dataset and features.
-            bsd.bootstrapped_numerical_features = RandomForestClassifier::bootstrap_features(
+            bsd.bootstrapped_numerical_features = RandomForestClassifier::create_bootstrap_features(
                 cvtd_bootstrapped_feats,
                 numerical_features,
                 mt_generator
             );
-            bsd.bootstrapped_categorical_features = RandomForestClassifier::bootstrap_features(
+            bsd.bootstrapped_categorical_features = RandomForestClassifier::create_bootstrap_features(
                 cvtd_bootstrapped_feats,
                 categorical_features,
                 mt_generator
             );
+            variant<mat, vec> tmp_bs_X = RandomForestClassifier::create_bootstrap_dataset(
+                X,
+                cvtd_bootstrapped_samples.
+                bsd.boot
+            );
+            // And here another problem arises, numerical and categorical features collide
+            // and increase code length
+
+            if () {
+
+            }
 
             co_yield bsd;
         } catch (invalid_argument& incorrect_argument_selection) {

@@ -41,25 +41,25 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
         std::vector<int>                                           categorical_features;
 
         // ── Learned state ──
-        std::vector<int>                        unique_classes;
-        float                                   oob_score_;
+        std::vector<int>                                           unique_classes;
+        float                                                      oob_score_;
 
         RandomForestClassifier(
-            int                                 n_estimators = 100,
-            std::string                         criterion = "gini",
-            int                                 max_depth = 10,
-            std::optional<std::variant<int, string>>                              max_features = "sqrt",
-            int                                 max_leaf_nodes = 10,
-            int                                 min_samples_leaf = 20,
-            int                                 min_samples_split = 30,
-            float                               min_information_gain = 1e-5f,
-            bool                                bootstrap = true,
-            bool                                oob_score = false,
-            std::optional<float>                max_samples = std::nullopt,
-            int                                 random_state = 42,
-            int                                 verbose = 0,
-            std::vector<int>                    numerical_features = {},
-            std::vector<int>                    categorical_features = {}
+            int                                                    n_estimators = 100,
+            std::string                                            criterion = "gini",
+            int                                                    max_depth = 10,
+            std::optional<std::variant<int, string>>               max_features = "sqrt",
+            int                                                    max_leaf_nodes = 10,
+            int                                                    min_samples_leaf = 20,
+            int                                                    min_samples_split = 30,
+            float                                                  min_information_gain = 1e-5f,
+            bool                                                   bootstrap = true,
+            bool                                                   oob_score = false,
+            std::optional<float>                                   max_samples = std::nullopt,
+            int                                                    random_state = 42,
+            int                                                    verbose = 0,
+            std::vector<int>                                       numerical_features = {},
+            std::vector<int>                                       categorical_features = {}
         );
 
         void fit (arma::mat& X, arma::vec& Y) override;
@@ -71,15 +71,16 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
         std::mt19937                            rng;
         std::map<int, int>                      classes_to_index;
 
-        std::variant<arma::vec, arma::mat> bootstrap_dataset (
+        std::variant<arma::mat, arma::vec> create_bootstrap_dataset (
             const std::variant<arma::mat, arma::vec>& dataset,
-            const arma::uvec non_contiguous_indices,
+            const int subsampled_max_samples,
+            const std::vector<int> subsampled_features,
             const mt19937& mt_generator
         );
-        std::vector<int> bootstrap_features (
-            int bootstrapped_feature_limit,
+        std::vector<int> create_bootstrap_features (
+            const int bootstrapped_feature_count,
             std::vector<int> feature_vector,
-            std::mt19937& mt_generator
+            const std::mt19937& mt_generator
         );
         std::generator<BootstrappedDataset> bootstrap_dataset (
             const arma::mat& X,
