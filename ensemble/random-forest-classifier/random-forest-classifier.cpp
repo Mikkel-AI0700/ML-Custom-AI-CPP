@@ -70,113 +70,70 @@ RandomForestClassifier::RandomForestClassifier(
     oob_score_(0.0f)
 {}
 
-variant<mat, vec> RandomForestClassifier::create_bootstrap_dataset (
-    const std::variant<mat, vec>& dataset,
+BootstrapIndices RandomForestClassifier::create_bootstrap_indices (
     const int subsampled_max_samples,
-    const vector<int> subsampled_features,
+    const int dataset_column_count,
     const mt19937& mt_generator
 ) {
-    // Need to get non-contiguous row and column indices for matrix
-    // Numerical features get different sets of rows and columns
-    // Same goes for categorical features
-    // The entire function needs to be feature, sample, and dataset agnostic
+    vector<int> temp_bsd_samples;
+    vector<int> temp_bsd_features;
+    BootstrapIndices bsd_indices;
+    uniform_int_distribution<int> uid_sample_generator(1, subsampled_max_samples);
 
-    // Use the already bootstrapped features as function parameter
-    // Now the return type is the problem
-}   
-
-vector<int> RandomForestClassifier::create_bootstrap_features (
-    const int bootstrapped_feature_count,
-    vector<int> feature_vector,
-    const mt19937& mt_generator
-) {
-    vector<int> temp_bsd_feats;
-    uniform_int_distribution<int> uid_feat_generator(1, feature_vector.size());
-
-    while (temp_bsd_feats.size() != bootstrapped_feature_count) {
-        int bsd_generated_number = uid_feat_generator(mt_generator);
-
-        auto bsd_num_location = find(
-            temp_bsd_feats.begin(),
-            temp_bsd_feats.end(),
-            bsd_generated_number
+    for (int index = 0; index < subsampled_max_samples; index++) {
+        temp_bsd_samples.emplace(
+            temp_bsd_samples.begin(), uid_sample_generator(mt_generator)
         );
-
-        if (bsd_num_location == temp_bsd_feats.end()) {
-            temp_bsd_feats.push_back(bsd_generated_number);
-        } else {
-            continue;
-        }
     }
 
-    return temp_bsd_feats;
-}
+    for (int index = 0; index < dataset_column_count; index++) {
+        temp_bsd_features.emplace(
+            temp_bsd_features.begin(), index
+        );
+    }
+
+    bsd_indices.bootstrapped_rows = arma::conv_to<uvec>::from(
+        temp_bsd_samples
+    );
+    bsd_indices.bootstrapped_rows = arma::conv_to<uvec>::from(
+        temp_bsd_features
+    );
+
+    return bsd_indices;
+}   
 
 generator<BootstrappedDataset> RandomForestClassifier::bootstrap_dataset (
     const mat& X,
-    vector<int> feature_vector,
+    const vec& Y,
     BootstrappedDataset& bsd
 ) {
     
     if (bootstrap) {
         random_device rd;
         mt19937 mt_generator(rd());
-        int cvtd_bootstrapped_feats;
         int cvtd_bootstrapped_samples;
-        vector<int> bootstrapped_features;
 
         try {
             // Processing of max samples to bootstrap
-            if (max_samples.has_value() &&
-                std::holds_alternative<int>(max_samples.value())
-            ) {
+            if (max_samples.has_value() && std::holds_alternative<int>(max_samples.value())) {
                 cvtd_bootstrapped_samples = std::get<int>(max_samples.value());
             } else {
                 cvtd_bootstrapped_samples = std::get<float>(max_samples.value()) * X.n_rows;
             }
 
-            // Processing of max features to bootstrap
-            if (max_features.has_value()) {
-                if (std::holds_alternative<int>(max_features.value())) {
-                    cvtd_bootstrapped_feats = std::get<int>(max_features.value());
-                } else if (std::holds_alternative<float>(max_features.value())) {
-                    cvtd_bootstrapped_feats = static_cast<int>(
-                        std::get<float>(max_features.value())
-                    );
-                } else if (std::get<string>(max_features.value()) == "sqrt") {
-                    cvtd_bootstrapped_feats = static_cast<int>(
-                        sqrt(feature_vector.size())
-                    );
-                } else if (std::get<string>(max_features.value()) == "log2") {
-                    cvtd_bootstrapped_feats = static_cast<int>(
-                        log2(feature_vector.size())
-                    );
-                } else {
-                    throw invalid_argument("[-] Incorrect argument selection. Exiting!");
-                }
-            }
-
-            bsd.bootstrapped_numerical_features = RandomForestClassifier::create_bootstrap_features(
-                cvtd_bootstrapped_feats,
-                numerical_features,
+            BootstrapIndices bsd_indices = RandomForestClassifier::create_bootstrap_indices(
+                cvtd_bootstrapped_samples,
+                X.n_cols,
                 mt_generator
             );
-            bsd.bootstrapped_categorical_features = RandomForestClassifier::create_bootstrap_features(
-                cvtd_bootstrapped_feats,
-                categorical_features,
-                mt_generator
-            );
-            variant<mat, vec> tmp_bs_X = RandomForestClassifier::create_bootstrap_dataset(
-                X,
-                cvtd_bootstrapped_samples.
-                bsd.boot
-            );
-            // And here another problem arises, numerical and categorical features collide
-            // and increase code length
 
-            if () {
-
-            }
+            bsd.bootstrapped_X = X.submat(
+                bsd_indices.bootstrapped_rows, 
+                bsd_indices.bootstrapped_cols
+            );
+            bsd.bootstrapped_Y = Y.rows(
+                bsd_indices.bootstrapped_rows
+            );
 
             co_yield bsd;
         } catch (invalid_argument& incorrect_argument_selection) {
