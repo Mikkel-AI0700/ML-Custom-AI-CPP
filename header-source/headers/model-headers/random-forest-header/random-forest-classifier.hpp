@@ -15,8 +15,11 @@
 struct BootstrappedDataset {
     arma::mat bootstrapped_X;
     arma::vec bootstrapped_Y;
-    std::vector<int> bootstrapped_numerical_features;
-    std::vector<int> bootstrapped_categorical_features;
+};
+
+struct BootstrapIndices {
+    arma::uvec bootstrapped_rows;
+    arma::uvec bootstrapped_cols;
 };
 
 class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
@@ -32,7 +35,7 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
         // ── DecisionTree pass-through hyperparameters ──
         std::string                                                criterion;
         int                                                        max_depth;
-        std::optional<std::variant<int, string>>                   max_features;
+        std::optional<std::variant<int, std::string>>              max_features;
         int                                                        max_leaf_nodes;
         int                                                        min_samples_leaf;
         int                                                        min_samples_split;
@@ -48,14 +51,14 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
             int                                                    n_estimators = 100,
             std::string                                            criterion = "gini",
             int                                                    max_depth = 10,
-            std::optional<std::variant<int, string>>               max_features = "sqrt",
+            std::optional<std::variant<int, std::string>>          max_features = "sqrt",
             int                                                    max_leaf_nodes = 10,
             int                                                    min_samples_leaf = 20,
             int                                                    min_samples_split = 30,
             float                                                  min_information_gain = 1e-5f,
             bool                                                   bootstrap = true,
             bool                                                   oob_score = false,
-            std::optional<float>                                   max_samples = std::nullopt,
+            std::optional<std::variant<int, float>>                max_samples = 1000,
             int                                                    random_state = 42,
             int                                                    verbose = 0,
             std::vector<int>                                       numerical_features = {},
@@ -68,24 +71,22 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
 
     private:
         std::vector<std::unique_ptr<DecisionTreeClassifier>> trees;
-        std::mt19937                            rng;
-        std::map<int, int>                      classes_to_index;
+        std::vector<BootstrappedDataset>                     generated_bsd;
+        std::mt19937                                         rng;
 
-        std::variant<arma::mat, arma::vec> create_bootstrap_dataset (
-            const std::variant<arma::mat, arma::vec>& dataset,
+        BootstrapIndices create_bootstrap_indices (
             const int subsampled_max_samples,
-            const std::vector<int> subsampled_features,
-            const mt19937& mt_generator
-        );
-        std::vector<int> create_bootstrap_features (
-            const int bootstrapped_feature_count,
-            std::vector<int> feature_vector,
-            const std::mt19937& mt_generator
+            const int dataset_row_count,
+            const int dataset_column_count,
+            BootstrapIndices& bsd_indices,
+            bool skip_column_generation
         );
         std::generator<BootstrappedDataset> bootstrap_dataset (
             const arma::mat& X,
-            std::vector<int> feature_vector,
-            BootstrappedDataset& bsd
+            const arma::vec& Y,
+            BootstrappedDataset& bsd,
+            BootstrapIndices& bsd_indices,
+            int estimator_counter
         );
         arma::mat build_forest (
             const arma::mat& X,

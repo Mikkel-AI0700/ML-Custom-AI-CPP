@@ -33,6 +33,8 @@ using std::invalid_argument;
 using arma::mat;
 using arma::vec;
 using arma::uvec;
+using arma::uword;
+using arma::regspace;
 
 RandomForestClassifier::RandomForestClassifier(
     int                               n_estimators,
@@ -45,7 +47,7 @@ RandomForestClassifier::RandomForestClassifier(
     float                             min_information_gain,
     bool                              bootstrap,
     bool                              oob_score,
-    optional<float>                   max_samples,
+    optional<variant<int, float>>     max_samples,
     int                               random_state,
     int                               verbose,
     vector<int>                       numerical_features,
@@ -72,45 +74,39 @@ RandomForestClassifier::RandomForestClassifier(
 
 BootstrapIndices RandomForestClassifier::create_bootstrap_indices (
     const int subsampled_max_samples,
+    const int dataset_row_count,
     const int dataset_column_count,
-    const mt19937& mt_generator
+    BootstrapIndices& bsd_indices,
+    bool skip_column_generation
 ) {
-    vector<int> temp_bsd_samples;
-    vector<int> temp_bsd_features;
-    BootstrapIndices bsd_indices;
-    uniform_int_distribution<int> uid_sample_generator(1, subsampled_max_samples);
+    uvec temp_bsd_samples(subsampled_max_samples);
+    uvec temp_bsd_features;
+    uniform_int_distribution<int> uid_sample_generator(0, dataset_row_count);
 
-    for (int index = 0; index < subsampled_max_samples; index++) {
-        temp_bsd_samples.emplace(
-            temp_bsd_samples.begin(), uid_sample_generator(mt_generator)
-        );
+    for (uword uw_int = 0; uw_int < subsampled_max_samples; ++uw_int) {
+        temp_bsd_samples[uw_int] = uid_sample_generator(rng);
     }
+    bsd_indices.bootstrapped_rows = temp_bsd_samples;
+    
+    if (skip_column_generation) {
+        return bsd_indices;
+    } else {
+        temp_bsd_features = regspace<uvec>(0, dataset_column_count);
+        bsd_indices.bootstrapped_cols = temp_bsd_features;
 
-    for (int index = 0; index < dataset_column_count; index++) {
-        temp_bsd_features.emplace(
-            temp_bsd_features.begin(), index
-        );
+        return bsd_indices;
     }
-
-    bsd_indices.bootstrapped_rows = arma::conv_to<uvec>::from(
-        temp_bsd_samples
-    );
-    bsd_indices.bootstrapped_rows = arma::conv_to<uvec>::from(
-        temp_bsd_features
-    );
-
-    return bsd_indices;
 }   
 
 generator<BootstrappedDataset> RandomForestClassifier::bootstrap_dataset (
     const mat& X,
     const vec& Y,
-    BootstrappedDataset& bsd
+    BootstrappedDataset& bsd,
+    BootstrapIndices& bsd_indices,
+    int estimator_count
 ) {
     
     if (bootstrap) {
-        random_device rd;
-        mt19937 mt_generator(rd());
         int cvtd_bootstrapped_samples;
 
         try {
@@ -121,15 +117,34 @@ generator<BootstrappedDataset> RandomForestClassifier::bootstrap_dataset (
                 cvtd_bootstrapped_samples = std::get<float>(max_samples.value()) * X.n_rows;
             }
 
-            BootstrapIndices bsd_indices = RandomForestClassifier::create_bootstrap_indices(
-                cvtd_bootstrapped_samples,
-                X.n_cols,
-                mt_generator
-            );
+            if (estimator_count == 0) {
+                bsd_indices = RandomForestClassifier::create_bootstrap_indices(
+                    cvtd_bootstrapped_samples,
+                    X.n_rows,
+                    X.n_cols,
+                    bsd_indices,
+                    false
+                );
+            } else {
+                bsd_indices = RandomForestClassifier::create_bootstrap_indices(
+                    cvtd_bootstrapped_samples,
+                    X.n_rows,
+                    X.n_cols,
+                    bsd_indices,
+                    true
+                );
+            }
+
+            // Potential improvement: Find a way to remove the estimator
+            // count parameter
+
+            // Potential improvement: Find a way to remove the boolean
+            // parameter and remove the condition
+
+            // Potential improvement: For the X and Y parameter, pass the row count.
 
             bsd.bootstrapped_X = X.submat(
-                bsd_indices.bootstrapped_rows, 
-                bsd_indices.bootstrapped_cols
+                bsd_indices.bootstrapped_rows, bsd_indices.bootstrapped_cols
             );
             bsd.bootstrapped_Y = Y.rows(
                 bsd_indices.bootstrapped_rows
@@ -146,20 +161,20 @@ generator<BootstrappedDataset> RandomForestClassifier::bootstrap_dataset (
     }
 }
 
-// ──────────────────────────────────────────────
-// bootstrap_sample  —  TODO: implement bootstrapping
-// ──────────────────────────────────────────────
-
 mat RandomForestClassifier::build_forest (
     const mat& X,
     const vec& Y,
     vec& out_y
 ) {
     random_device rd;
-    mt19937 mt_generator_seeded(rd());
+    BootstrappedDataset bsd;
+    BootstrapIndices bsd_indices;
+    int est_cnt = 0;
 
-    for (int index = 0; index < n_estimators; index++) {
-
+    for (const auto&& bsd_indices : RandomForestClassifier::bootstrap_dataset(X, Y, bsd, bsd_indices, est_cnt)) {
+        if (est_cnt == n_estimators) {
+            break;
+        }
     }
 }
 
@@ -167,7 +182,7 @@ mat RandomForestClassifier::build_forest (
 // fit  —  TODO: implement RF training
 // ──────────────────────────────────────────────
 
-void RandomForestClassifier::fit (const mat& X, const vec& Y) {
+void RandomForestClassifier::fit (mat& X, vec& Y) {
     
 }
 
@@ -258,7 +273,7 @@ int main () {
         0.0001f,         // min_information_gain
         true,            // bootstrap
         false,           // oob_score
-        std::nullopt,    // max_samples
+        10000,    // max_samples
         42,              // random_state
         0,               // verbose
         num_feats,       // numerical_features
