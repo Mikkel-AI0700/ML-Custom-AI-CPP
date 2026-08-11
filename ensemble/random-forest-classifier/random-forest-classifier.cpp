@@ -161,10 +161,9 @@ generator<BootstrappedDataset> RandomForestClassifier::bootstrap_dataset (
     }
 }
 
-mat RandomForestClassifier::build_forest (
+void RandomForestClassifier::build_forest (
     const mat& X,
-    const vec& Y,
-    vec& out_y
+    const vec& Y
 ) {
     random_device rd;
     BootstrappedDataset bsd;
