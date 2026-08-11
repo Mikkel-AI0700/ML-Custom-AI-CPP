@@ -171,10 +171,21 @@ mat RandomForestClassifier::build_forest (
     BootstrapIndices bsd_indices;
     int est_cnt = 0;
 
-    for (const auto&& bsd_indices : RandomForestClassifier::bootstrap_dataset(X, Y, bsd, bsd_indices, est_cnt)) {
-        if (est_cnt == n_estimators) {
-            break;
-        }
+    for (int est_cnt = 0; est_cnt < n_estimators; ++est_cnt) {
+        auto dt_instance = std::make_unique<DecisionTreeClassifier>(
+            criterion,
+            max_depth,
+            "sqrt",
+            max_leaf_nodes,
+            min_samples_leaf,
+            min_samples_split,
+            min_information_gain,
+            numerical_features,
+            categorical_features
+        );
+
+        cout << "[+] Tree no." << est_cnt << "created" << endl;
+        trees.emplace_back(dt_instance);
     }
 }
 
@@ -183,7 +194,11 @@ mat RandomForestClassifier::build_forest (
 // ──────────────────────────────────────────────
 
 void RandomForestClassifier::fit (mat& X, vec& Y) {
+    // Bootstrap the dataset here
     
+    RandomForestClassifier::bootstrap_dataset();
+
+    // Return it from here
 }
 
 // ──────────────────────────────────────────────
