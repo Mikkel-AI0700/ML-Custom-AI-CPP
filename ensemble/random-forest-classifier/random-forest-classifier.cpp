@@ -27,7 +27,7 @@ using std::find;
 using std::random_device;
 using std::mt19937;
 using std::uniform_int_distribution;
-using std::invalid_argument;
+using std::bad_variant_access;
 
 // Armadillo
 using arma::mat;
@@ -72,104 +72,17 @@ RandomForestClassifier::RandomForestClassifier(
     oob_score_(0.0f)
 {}
 
-BootstrapIndices RandomForestClassifier::create_bootstrap_indices (
-    const int subsampled_max_samples,
+void RandomForestClassifier::create_sub_rng_seed (
     const int dataset_row_count,
-    const int dataset_column_count,
-    BootstrapIndices& bsd_indices,
-    bool skip_column_generation
+    mt19937& mt_generator
 ) {
-    uvec temp_bsd_samples(subsampled_max_samples);
-    uvec temp_bsd_features;
-    uniform_int_distribution<int> uid_sample_generator(0, dataset_row_count);
-
-    for (uword uw_int = 0; uw_int < subsampled_max_samples; ++uw_int) {
-        temp_bsd_samples[uw_int] = uid_sample_generator(rng);
-    }
-    bsd_indices.bootstrapped_rows = temp_bsd_samples;
-    
-    if (skip_column_generation) {
-        return bsd_indices;
-    } else {
-        temp_bsd_features = regspace<uvec>(0, dataset_column_count);
-        bsd_indices.bootstrapped_cols = temp_bsd_features;
-
-        return bsd_indices;
-    }
-}   
-
-generator<BootstrappedDataset> RandomForestClassifier::bootstrap_dataset (
-    const mat& X,
-    const vec& Y,
-    BootstrappedDataset& bsd,
-    BootstrapIndices& bsd_indices,
-    int estimator_count
-) {
-    
-    if (bootstrap) {
-        int cvtd_bootstrapped_samples;
-
-        try {
-            // Processing of max samples to bootstrap
-            if (max_samples.has_value() && std::holds_alternative<int>(max_samples.value())) {
-                cvtd_bootstrapped_samples = std::get<int>(max_samples.value());
-            } else {
-                cvtd_bootstrapped_samples = std::get<float>(max_samples.value()) * X.n_rows;
-            }
-
-            if (estimator_count == 0) {
-                bsd_indices = RandomForestClassifier::create_bootstrap_indices(
-                    cvtd_bootstrapped_samples,
-                    X.n_rows,
-                    X.n_cols,
-                    bsd_indices,
-                    false
-                );
-            } else {
-                bsd_indices = RandomForestClassifier::create_bootstrap_indices(
-                    cvtd_bootstrapped_samples,
-                    X.n_rows,
-                    X.n_cols,
-                    bsd_indices,
-                    true
-                );
-            }
-
-            // Potential improvement: Find a way to remove the estimator
-            // count parameter
-
-            // Potential improvement: Find a way to remove the boolean
-            // parameter and remove the condition
-
-            // Potential improvement: For the X and Y parameter, pass the row count.
-
-            bsd.bootstrapped_X = X.submat(
-                bsd_indices.bootstrapped_rows, bsd_indices.bootstrapped_cols
-            );
-            bsd.bootstrapped_Y = Y.rows(
-                bsd_indices.bootstrapped_rows
-            );
-
-            co_yield bsd;
-        } catch (invalid_argument& incorrect_argument_selection) {
-            cout << incorrect_argument_selection.what() << endl;
-            co_return;
-        }
-    } else {
-        cout << "[*] Bootstrapping disabled." << endl;
-        co_return;
+    uniform_int_distribution<int> uid_child_rng_generator(0, 1000);
+    for (int est_cnt = 0; est_cnt < n_estimators; ++est_cnt) {
+        rng_per_tree.emplace_back(uid_child_rng_generator(mt_generator));
     }
 }
 
-void RandomForestClassifier::build_forest (
-    const mat& X,
-    const vec& Y
-) {
-    random_device rd;
-    BootstrappedDataset bsd;
-    BootstrapIndices bsd_indices;
-    int est_cnt = 0;
-
+void RandomForestClassifier::build_forest () {
     for (int est_cnt = 0; est_cnt < n_estimators; ++est_cnt) {
         auto dt_instance = std::make_unique<DecisionTreeClassifier>(
             criterion,
@@ -188,16 +101,55 @@ void RandomForestClassifier::build_forest (
     }
 }
 
-// ──────────────────────────────────────────────
-// fit  —  TODO: implement RF training
-// ──────────────────────────────────────────────
+int RandomForestClassifier::subsample_max_row_count (
+    const int dataset_row_count
+) {
+    int cvtd_subsampled_max_features;
+
+    try {
+        if (max_samples.has_value()) {
+            if (std::holds_alternative<int>(max_features.value())) {
+                cvtd_subsampled_max_features = std::get<int>(max_features.value());
+            } else if (std::holds_alternative<float>(max_features.value())) {
+                cvtd_subsampled_max_features = std::get<float>(max_features.value()) * dataset_row_count;
+            } else {
+                throw bad_variant_access();
+            }
+
+            return cvtd_subsampled_max_features;
+        } else {
+            return 0;
+        }
+    } catch (bad_variant_access& invalid_user_argument_accessed) {
+        cout << "[-] Error: " << invalid_user_argument_accessed.what() << endl;
+        return 0;
+    }
+}
 
 void RandomForestClassifier::fit (mat& X, vec& Y) {
-    // Bootstrap the dataset here
-    
-    RandomForestClassifier::bootstrap_dataset();
+    rng.seed(random_state);
+    uniform_int_distribution<int> uid_samples_generator(0, X.n_rows);
 
-    // Return it from here
+    uvec bsd_row_indices;
+    uvec bsd_col_indices = arma::conv_to<uvec>::from();
+
+    int subsampled_sample_count = RandomForestClassifier::subsample_max_row_count(X.n_rows);
+    RandomForestClassifier::create_sub_rng_seed(X.n_rows, rng);
+    RandomForestClassifier::build_forest();
+
+    for (int est_idx = 0; est_idx < n_estimators; ++est_idx) {
+        vector<int> rows_indices;
+        rng_child.seed(rng_per_tree[est_idx]);
+
+        for (int smpl_cnt_bnd = 0; smpl_cnt_bnd < subsampled_sample_count; ++smpl_cnt_bnd) {
+            rows_indices.emplace(
+                rows_indices.begin(),
+                uid_samples_generator(rng_child)
+            );
+        }
+
+        bsd_row_indices = arma::conv_to<uvec>::from(rows_indices);
+    }
 }
 
 // ──────────────────────────────────────────────
