@@ -17,11 +17,6 @@ struct BootstrappedDataset {
     arma::vec bootstrapped_Y;
 };
 
-struct BootstrapIndices {
-    arma::uvec bootstrapped_rows;
-    arma::uvec bootstrapped_cols;
-};
-
 class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
     public:
         // ── RandomForest-specific hyperparameters ──
@@ -71,28 +66,18 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
 
     private:
         std::vector<std::unique_ptr<DecisionTreeClassifier>> trees;
-        std::vector<BootstrappedDataset>                     generated_bsd;
+        std::vector<int>                                     rng_per_tree;
         std::mt19937                                         rng;
+        std::mt19937                                         rng_child;
 
-        BootstrapIndices create_bootstrap_indices (
-            const int subsampled_max_samples,
-            const int dataset_row_count,
-            const int dataset_column_count,
-            BootstrapIndices& bsd_indices,
-            bool skip_column_generation
+        void create_sub_rng_seed (
+            const int training_matrix_row_count,
+            mt19937& mt_generator
         );
-        std::generator<BootstrappedDataset> bootstrap_dataset (
-            const arma::mat& X,
-            const arma::vec& Y,
-            BootstrappedDataset& bsd,
-            BootstrapIndices& bsd_indices,
-            int estimator_counter
+        int subsample_max_row_count (
+            const int dataset_row_count
         );
-        arma::mat build_forest (
-            const arma::mat& X,
-            const arma::vec& Y,
-            arma::vec& out_y
-        );
+        void build_forest ();
         int majority_vote (const std::vector<int>& tree_preds);
         arma::vec average_probabilities (
             const std::vector<arma::vec>& all_probs
