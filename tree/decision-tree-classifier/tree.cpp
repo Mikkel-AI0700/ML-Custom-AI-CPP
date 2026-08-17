@@ -34,7 +34,7 @@ using arma::uvec;
 DecisionTreeClassifier::DecisionTreeClassifier(
     string                              split_metric,
     int                                 max_depth,
-    SIDual                              max_feature,
+    variant<int, string>                max_feature,
     int                                 max_leaf_nodes,
     int                                 min_samples_leaf,
     int                                 min_samples_split,

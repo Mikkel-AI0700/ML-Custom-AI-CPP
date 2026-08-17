@@ -97,7 +97,7 @@ void RandomForestClassifier::build_forest () {
         );
 
         cout << "[+] Tree no." << est_cnt << "created" << endl;
-        trees.emplace_back(dt_instance);
+        trees.emplace_back(std::move(dt_instance));
     }
 }
 
@@ -108,10 +108,10 @@ int RandomForestClassifier::subsample_max_row_count (
 
     try {
         if (max_samples.has_value()) {
-            if (std::holds_alternative<int>(max_features.value())) {
-                cvtd_subsampled_max_features = std::get<int>(max_features.value());
-            } else if (std::holds_alternative<float>(max_features.value())) {
-                cvtd_subsampled_max_features = std::get<float>(max_features.value()) * dataset_row_count;
+            if (std::holds_alternative<int>(max_samples.value())) {
+                cvtd_subsampled_max_features = std::get<int>(max_samples.value());
+            } else if (std::holds_alternative<float>(max_samples.value())) {
+                cvtd_subsampled_max_features = std::get<float>(max_samples.value()) * dataset_row_count;
             } else {
                 throw bad_variant_access();
             }
@@ -126,29 +126,63 @@ int RandomForestClassifier::subsample_max_row_count (
     }
 }
 
+uvec RandomForestClassifier::create_indices (
+    int row_count,
+    int col_count,
+    int subsampled_row_count,
+    mt19937 sub_seeded_rng,
+    bool create_row_indices,
+    bool create_column_indices
+) {
+    if (create_row_indices) {
+        uvec selected_indices = arma::regspace<uvec>(0, subsampled_row_count - 1);
+        uniform_int_distribution<int> uid_generator(0, row_count - 1);
+
+        for (arma::uword row_cnt = 0; row_cnt < subsampled_row_count; ++row_cnt) {
+            selected_indices[row_cnt] = uid_generator(sub_seeded_rng);
+        }
+
+        return selected_indices;
+    }
+
+    if (create_column_indices) {
+        uvec generated_col_indices = arma::regspace<uvec>(0, col_count - 1);
+        return generated_col_indices;
+    }
+}
+
 void RandomForestClassifier::fit (mat& X, vec& Y) {
     rng.seed(random_state);
     uniform_int_distribution<int> uid_samples_generator(0, X.n_rows);
-
-    uvec bsd_row_indices;
-    uvec bsd_col_indices = arma::conv_to<uvec>::from();
 
     int subsampled_sample_count = RandomForestClassifier::subsample_max_row_count(X.n_rows);
     RandomForestClassifier::create_sub_rng_seed(X.n_rows, rng);
     RandomForestClassifier::build_forest();
 
     for (int est_idx = 0; est_idx < n_estimators; ++est_idx) {
-        vector<int> rows_indices;
         rng_child.seed(rng_per_tree[est_idx]);
 
-        for (int smpl_cnt_bnd = 0; smpl_cnt_bnd < subsampled_sample_count; ++smpl_cnt_bnd) {
-            rows_indices.emplace(
-                rows_indices.begin(),
-                uid_samples_generator(rng_child)
-            );
-        }
+        uvec bsd_row_indices = RandomForestClassifier::create_indices(
+            X.n_rows,
+            X.n_cols,
+            subsampled_sample_count,
+            rng_child,
+            true,
+            false
+        );
+        uvec bsd_col_indices = RandomForestClassifier::create_indices(
+            X.n_rows,
+            X.n_cols,
+            subsampled_sample_count,
+            rng_child,
+            false,
+            true
+        );
 
-        bsd_row_indices = arma::conv_to<uvec>::from(rows_indices);
+        mat selected_X = X.submat(bsd_row_indices, bsd_col_indices);
+        vec selected_y = Y.rows(bsd_row_indices);
+
+        trees[est_idx]->fit(selected_X, selected_y);
     }
 }
 

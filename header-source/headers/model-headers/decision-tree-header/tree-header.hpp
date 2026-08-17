@@ -75,7 +75,7 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
     public:
         std::string                             split_metric;
         int                                     max_depth;
-        SIDual                                  max_feature;
+        std::variant<int, std::string>          max_feature;
         int                                     max_leaf_nodes;
         int                                     min_samples_leaf;
         int                                     min_samples_split;
@@ -86,7 +86,7 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         DecisionTreeClassifier(
             std::string                         split_metric = "gini",
             int                                 max_depth = 10,
-            SIDual                              max_feature = "none",
+            std::variant<int, std::string>      max_feature = "none",
             int                                 max_leaf_nodes = 10,
             int                                 min_samples_leaf = 20,
             int                                 min_samples_split = 30,

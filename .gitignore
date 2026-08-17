@@ -32,5 +32,10 @@ Thumbs.db
 
 # Datasets
 python-utilities/test-data/classification/adult/
+python-utilities/data/classification/rt-iot2022.zip
+python-utilities/data/classification/rt-iot2022/
 *.csv
 *.swp
+
+# Generated performance metrics
+performance-metrics/

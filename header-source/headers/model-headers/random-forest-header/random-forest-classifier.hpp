@@ -70,6 +70,14 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
         std::mt19937                                         rng;
         std::mt19937                                         rng_child;
 
+        arma::uvec create_indices (
+            int row_count,
+            int col_count,
+            int subsampled_row_count,
+            mt19937 sub_seeded_rng,
+            bool create_row_indices,
+            bool create_column_indices
+        );
         void create_sub_rng_seed (
             const int training_matrix_row_count,
             mt19937& mt_generator
