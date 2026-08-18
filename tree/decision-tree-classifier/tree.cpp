@@ -1,6 +1,7 @@
 #include <map>
 #include <memory>
 #include <vector>
+#include <random>
 #include <cstdlib>
 #include <variant>
 #include <optional>
@@ -14,6 +15,7 @@
 // C++ STL library
 using std::endl;
 using std::cout;
+using std::cerr;
 using std::string;
 using std::vector;
 using std::variant;
@@ -34,7 +36,7 @@ using arma::uvec;
 DecisionTreeClassifier::DecisionTreeClassifier(
     string                              split_metric,
     int                                 max_depth,
-    variant<int, string>                max_feature,
+    variant<int, float, string>         max_feature,
     int                                 max_leaf_nodes,
     int                                 min_samples_leaf,
     int                                 min_samples_split,
@@ -146,6 +148,11 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
             } else {
                 math_length = std::get<int>(max_feature);
             }
+        } else if (std::holds_alternative<float>(max_feature)) {
+            math_length = static_cast<int>(std::get<float>(max_feature) * feature_list.size());
+            if (math_length > feature_list.size()) {
+                throw std::out_of_range("Amount of features is greater than subsample size");
+            }
         } else {
             throw bad_variant_access();
         }
@@ -172,13 +179,13 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
 
         return selected_features;
     } catch (const bad_variant_access& error) {
-        cout << "Error: " << error.what();
+        cerr << "Error: " << error.what();
         return {};
     } catch (const runtime_error& error) {
-        cout << "Error: " << error.what();
+        cerr << "Error: " << error.what();
         return {};
     } catch (const out_of_range& error) {
-        cout << "Error: " << error.what();
+        cerr << "Error: " << error.what();
         return {};
     }
 }
