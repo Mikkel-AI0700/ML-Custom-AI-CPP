@@ -73,26 +73,26 @@ struct Node {
 
 class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
     public:
-        std::string                             split_metric;
-        int                                     max_depth;
-        std::variant<int, std::string>          max_feature;
-        int                                     max_leaf_nodes;
-        int                                     min_samples_leaf;
-        int                                     min_samples_split;
-        float                                   min_information_gain;
-        std::vector<int>                        numerical_features;
-        std::vector<int>                        categorical_features;
+        std::string                                 split_metric;
+        int                                         max_depth;
+        std::variant<int, float, std::string>       max_feature;
+        int                                         max_leaf_nodes;
+        int                                         min_samples_leaf;
+        int                                         min_samples_split;
+        float                                       min_information_gain;
+        std::vector<int>                            numerical_features;
+        std::vector<int>                            categorical_features;
 
         DecisionTreeClassifier(
-            std::string                         split_metric = "gini",
-            int                                 max_depth = 10,
-            std::variant<int, std::string>      max_feature = "none",
-            int                                 max_leaf_nodes = 10,
-            int                                 min_samples_leaf = 20,
-            int                                 min_samples_split = 30,
-            float                               min_information_gain = 1e-5f,
-            std::vector<int>                    numerical_features = {},
-            std::vector<int>                    categorical_features = {}
+            std::string                             split_metric = "gini",
+            int                                     max_depth = 10,
+            std::variant<int, float, std::string>   max_feature = "none",
+            int                                     max_leaf_nodes = 10,
+            int                                     min_samples_leaf = 20,
+            int                                     min_samples_split = 30,
+            float                                   min_information_gain = 1e-5f,
+            std::vector<int>                        numerical_features = {},
+            std::vector<int>                        categorical_features = {}
         );
 
         void fit (arma::mat& X, arma::vec& Y) override;
