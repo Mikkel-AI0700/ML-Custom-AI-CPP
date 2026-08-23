@@ -132,6 +132,49 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
         int math_length;
         int generated_number;
 
+        // New refactored code
+        std::visit([this, &math_length, &feature_list](auto&& member) {
+            using Type = std::decay_t<decltype(member)>;
+            
+            if constexpr (std::is_same_v<Type, int>) {
+                math_length = std::get<int>(max_feature);
+            } else if constexpr (std::is_same_v<Type, float>) {
+                math_length = static_cast<int>(std::get<float>(max_feature) * feature_list.size());
+            } else if constexpr (std::is_same_v<Type, string>) {
+                string tmp_feat_type = std::get<string>(max_feature);
+                vector<string> valid_hyperparam = {"sqrt", "log2", "none"};
+                
+                bool is_max_feat_valid = std::any_of(
+                    valid_hyperparam.begin(),
+                    valid_hyperparam.end(),
+                    [&tmp_feat_type](const string& hyperparam_value) {
+                        if (tmp_feat_type == hyperparam_value) {
+                            return true;
+                        }
+                    }
+                );
+
+                if (!is_max_feat_valid) {
+                    throw invalid_argument("User-supplied argument invalid. Choices: sqrt/log2/none");
+                }
+
+                if (tmp_feat_type == "sqrt") {
+                    math_length = static_cast<int>(sqrt(feature_list.size()));
+                } else if (tmp_feat_type == "log2") {
+                    math_length = static_cast<int>(log2(feature_list.size()));
+                } else {
+                    math_length = feature_list.size();
+                }
+            } else {
+                throw bad_variant_access();
+            }
+
+            if (feature_list.size() > math_length) {
+                throw out_of_range("Subsampling amount is greater than features expected");
+            }
+        }, max_feature);
+
+        // Old code
         if (std::holds_alternative<string>(max_feature)) {
             if (std::get<string>(max_feature) == "sqrt") {
                 math_length = static_cast<int>(sqrt(feature_list.size()));
@@ -180,13 +223,13 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
         return selected_features;
     } catch (const bad_variant_access& error) {
         cerr << "Error: " << error.what();
-        return {};
+        return feature_list;
     } catch (const runtime_error& error) {
         cerr << "Error: " << error.what();
-        return {};
+        return feature_list;
     } catch (const out_of_range& error) {
         cerr << "Error: " << error.what();
-        return {};
+        return feature_list;
     }
 }
 
