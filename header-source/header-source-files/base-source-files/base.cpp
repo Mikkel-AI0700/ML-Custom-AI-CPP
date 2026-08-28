@@ -7,6 +7,11 @@
 #include "base.hpp"
 #include "model_types.hpp"
 
+using std::invalid_argument;
+
+using arma::vec;
+using arma::mat;
+
 HashMapParameters BaseEstimator::get_parameters (HashMapParameters hyperparameter_hashmap) {
     return hyperparameter_hashmap;
 }
@@ -23,28 +28,28 @@ void BaseEstimator::set_parameters (
                 original_hyperparameters[key] = value;
             }
         }
-    } catch (const std::invalid_argument& non_existent_hyperparameter) {
+    } catch (const invalid_argument& non_existent_hyperparameter) {
         std::cout << "[-] Error: " << non_existent_hyperparameter.what() << std::endl;
     }
 }
 
 // nopsled as child classess will override definition
-void BaseEstimator::fit (arma::mat& train_x, arma::colvec& train_y) {
+void BaseEstimator::fit (mat& train_x, vec& train_y) {
     ;
 }
 
 // nopsled as child classess will override definition
-arma::colvec BaseEstimator::predict (arma::mat& test_x) {
+vec BaseEstimator::predict (mat& test_x) {
     ;
 }
 
 // nopsled as child classess will override definition
-arma::rowvec BaseEstimator::predict_proba (arma::mat& test_x) {
+vec BaseEstimator::predict_proba (mat& test_x) {
     ;
 }
 
 // nopsled as child classess will override definition
-arma::rowvec BaseEstimator::predict_proba_log (arma::mat& test_x) {
+vec BaseEstimator::predict_proba_log (mat& test_x) {
     ;
 }
 
