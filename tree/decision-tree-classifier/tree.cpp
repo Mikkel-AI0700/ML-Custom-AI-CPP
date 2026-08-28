@@ -1,4 +1,5 @@
 #include <map>
+#include <cmath>
 #include <memory>
 #include <vector>
 #include <random>
@@ -137,11 +138,11 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
             using Type = std::decay_t<decltype(member)>;
             
             if constexpr (std::is_same_v<Type, int>) {
-                math_length = std::get<int>(max_feature);
+                math_length = member;
             } else if constexpr (std::is_same_v<Type, float>) {
-                math_length = static_cast<int>(std::get<float>(max_feature) * feature_list.size());
+                math_length = static_cast<int>(member * feature_list.size());
             } else if constexpr (std::is_same_v<Type, string>) {
-                string tmp_feat_type = std::get<string>(max_feature);
+                const string& tmp_feat_type = member;
                 vector<string> valid_hyperparam = {"sqrt", "log2", "none"};
                 
                 bool is_max_feat_valid = std::any_of(
@@ -150,6 +151,8 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
                     [&tmp_feat_type](const string& hyperparam_value) {
                         if (tmp_feat_type == hyperparam_value) {
                             return true;
+                        } else {
+                            return false;
                         }
                     }
                 );
@@ -169,36 +172,10 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
                 throw bad_variant_access();
             }
 
-            if (feature_list.size() > math_length) {
+            if (math_length > feature_list.size()) {
                 throw out_of_range("Subsampling amount is greater than features expected");
             }
         }, max_feature);
-
-        // Old code
-        if (std::holds_alternative<string>(max_feature)) {
-            if (std::get<string>(max_feature) == "sqrt") {
-                math_length = static_cast<int>(sqrt(feature_list.size()));
-            } else if (std::get<string>(max_feature) == "log2") {
-                math_length = static_cast<int>(log2(feature_list.size()));
-            } else if (std::get<string>(max_feature) == "none") {
-                math_length = feature_list.size();
-            } else {
-                throw runtime_error("Invalid max_feature string provided.");
-            }
-        } else if (std::holds_alternative<int>(max_feature)) {
-            if (feature_list.size() > std::get<int>(max_feature)) {
-                throw std::out_of_range("Amount of features is greater than subsample size");
-            } else {
-                math_length = std::get<int>(max_feature);
-            }
-        } else if (std::holds_alternative<float>(max_feature)) {
-            math_length = static_cast<int>(std::get<float>(max_feature) * feature_list.size());
-            if (math_length > feature_list.size()) {
-                throw std::out_of_range("Amount of features is greater than subsample size");
-            }
-        } else {
-            throw bad_variant_access();
-        }
 
         // Guard to prevent infinite while-loop recursion
         math_length = std::min(math_length, static_cast<int>(feature_list.size()));
@@ -228,6 +205,9 @@ vector<int> DecisionTreeClassifier::determine_feature_split_metric (vector<int> 
         cerr << "Error: " << error.what();
         return feature_list;
     } catch (const out_of_range& error) {
+        cerr << "Error: " << error.what();
+        return feature_list;
+    } catch (const invalid_argument& error) {
         cerr << "Error: " << error.what();
         return feature_list;
     }
