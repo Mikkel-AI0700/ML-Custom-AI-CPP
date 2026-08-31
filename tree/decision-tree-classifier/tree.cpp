@@ -521,23 +521,37 @@ void DecisionTreeClassifier::fit (mat& X, vec& Y) {
     );
 }
 
-vec DecisionTreeClassifier::predict (mat& X) {
-    vector<float> predictions;
+variant<int, vec> DecisionTreeClassifier::predict (
+    variant<vec, mat>& X
+) {
+    try {
+        if (unique_classes.empty()) {
+            throw runtime_error("Model has not been fitted yet.");
+        }
 
-    if (unique_classes.empty()) {
-        throw std::runtime_error("[-] Error: Model has not been fitted yet.");
+        if (std::holds_alternative<vec>(X)) {
+            return DecisionTreeClassifier::traverse_tree_prediction(
+                std::get<vec>(X), root_node
+            );
+        } else if (std::holds_alternative<mat>(X)) {
+            vector<int> predictions;
+            for (arma::uword index = 0; index < std::get<mat>(X).n_rows; index++) {
+                predictions.push_back(
+                    DecisionTreeClassifier::traverse_tree_prediction(
+                        std::get<mat>(X).row(index),
+                        root_node
+                    )
+                );
+            }
+            return arma::conv_to<vec>::from(predictions);
+        } else {
+            throw invalid_argument("Argument is neither arma::vec nor arma::mat");
+        }
+    } catch (const runtime_error& error) {
+        cerr << "[-] Error: " << error.what() << endl;
+    } catch (const invalid_argument& error) {
+        cerr << "[-] Error: " << error.what() << endl;
     }
-
-    for (int index = 0; index < X.n_rows; index++) {
-        mat row = X.row(index);
-        int pred_index = DecisionTreeClassifier::traverse_tree_prediction(
-            row,
-            root_node
-        );
-        predictions.push_back(static_cast<float>(unique_classes.at(pred_index)));
-    }
-
-    return arma::conv_to<vec>::from(predictions);
 }
 
 #ifndef SKIP_MAIN
@@ -584,11 +598,11 @@ int main () {
 
     tree.fit(train_x, train_y);
 
-    vec predictions = tree.predict(test_x);
+    //vec predictions = tree.predict(test_x);
 
-    dset_ops.save_dataset(
-        dataset_path + "/predictions/cpp-predictions.csv",
-        predictions
-    );
+    //dset_ops.save_dataset(
+    //    dataset_path + "/predictions/cpp-predictions.csv",
+    //    predictions
+    //);
 }
 #endif
