@@ -449,9 +449,11 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
 
 }
 
-int DecisionTreeClassifier::traverse_tree_prediction (
+variant<int, vec> DecisionTreeClassifier::traverse_tree_prediction (
     const mat& element,
-    const unique_ptr<Node>& node
+    const unique_ptr<Node>& node,
+    bool standard_traverse,
+    bool probability_traverse
 ) {
     if (node->is_leaf_node) {
         vector<double> computed_probabilities(
@@ -464,10 +466,13 @@ int DecisionTreeClassifier::traverse_tree_prediction (
             computed_probabilities.end()
         );
 
-        return std::distance(
-            computed_probabilities.begin(),
-            max_elem_ptr
-        );
+        if (standard_traverse) {
+            return unique_classes[
+                std::distance(computed_probabilities.begin(), max_elem_ptr)
+            ];
+        } else {
+            return node->computed_probabilities;
+        }
     }
 
     if (node->num_condition.has_value()) {
@@ -475,12 +480,16 @@ int DecisionTreeClassifier::traverse_tree_prediction (
         if (element.at(node->split_index) > extracted_num_cond) {
             return DecisionTreeClassifier::traverse_tree_prediction(
                 element,
-                node->left_branch
+                node->left_branch,
+                standard_traverse,
+                probability_traverse
             );
         } else {
             return DecisionTreeClassifier::traverse_tree_prediction(
                 element,
-                node->right_branch
+                node->right_branch,
+                standard_traverse,
+                probability_traverse
             );
         }
     }
@@ -490,12 +499,16 @@ int DecisionTreeClassifier::traverse_tree_prediction (
         if (element.at(node->split_index) == extracted_cat_cond) {
             return DecisionTreeClassifier::traverse_tree_prediction(
                 element,
-                node->left_branch
+                node->left_branch,
+                standard_traverse,
+                probability_traverse
             );
         } else {
             return DecisionTreeClassifier::traverse_tree_prediction(
                 element,
-                node->right_branch
+                node->right_branch,
+                standard_traverse,
+                probability_traverse
             );
         }
     }
@@ -507,7 +520,7 @@ void DecisionTreeClassifier::fit (mat& X, vec& Y) {
     int recursive_max_depth = 1;
 
     // To prevent overlap of old and new labels
-    // If user fits multiple times
+    // If user decided to be stupid and fits multiple times
     unique_classes.clear();
     classes_to_index.clear();
 
@@ -530,27 +543,67 @@ variant<int, vec> DecisionTreeClassifier::predict (
         }
 
         if (std::holds_alternative<vec>(X)) {
-            return DecisionTreeClassifier::traverse_tree_prediction(
-                std::get<vec>(X), root_node
+            variant<int, vec> pred = DecisionTreeClassifier::traverse_tree_prediction(
+                std::get<vec>(X), root_node, true, false
             );
+            return std::get<int>(pred);
         } else if (std::holds_alternative<mat>(X)) {
             vector<int> predictions;
             for (arma::uword index = 0; index < std::get<mat>(X).n_rows; index++) {
-                predictions.push_back(
-                    DecisionTreeClassifier::traverse_tree_prediction(
-                        std::get<mat>(X).row(index),
-                        root_node
-                    )
+                variant<int, vec> prediction = DecisionTreeClassifier::traverse_tree_prediction(
+                    std::get<mat>(X).row(index), root_node, false, true
                 );
+                predictions.emplace_back(std::get<int>(prediction));
             }
             return arma::conv_to<vec>::from(predictions);
         } else {
             throw invalid_argument("Argument is neither arma::vec nor arma::mat");
         }
     } catch (const runtime_error& error) {
-        cerr << "[-] Error: " << error.what() << endl;
+        cerr << error.what() << endl;
+        exit(1);
     } catch (const invalid_argument& error) {
-        cerr << "[-] Error: " << error.what() << endl;
+        cerr << error.what() << endl;
+        exit(1);
+    } catch (const out_of_range& error) {
+        cerr << error.what() << endl;
+        exit(1);
+    }
+}
+
+variant<vec, mat> DecisionTreeClassifier::predict_proba (
+    variant<vec, mat>& X
+) {
+    try {
+        if (unique_classes.empty()) {
+            throw runtime_error("[-] Error: Model has not been fitted yet");
+        }
+
+        if (std::holds_alternative<vec>(X)) {
+            variant<int, vec> prediction = DecisionTreeClassifier::traverse_tree_prediction(
+                std::get<vec>(X), root_node, false, true
+            );
+            return std::get<vec>(prediction);
+        } else if (std::holds_alternative<mat>(X)) {
+            vector<vec> probability_distributions;
+            for (arma::uword index = 0; index < std::get<mat>(X).n_rows; index++) {
+                variant<int, vec> prediction = DecisionTreeClassifier::traverse_tree_prediction(
+                    std::get<mat>(X).row(index), root_node, false, true
+                );
+                probability_distributions.emplace_back(std::get<vec>(prediction));
+            }
+        } else {
+            throw invalid_argument("[-] Error: Argument is neither arma::vec or arma::mat");
+        }
+    } catch (const runtime_error& error) {
+        cerr << error.what() << endl;
+        exit(1);
+    } catch (const invalid_argument& error) {
+        cerr << error.what() << endl;
+        exit(1);
+    } catch (const out_of_range& error) {
+        cerr << error.what() << endl;
+        exit(1);
     }
 }
 
