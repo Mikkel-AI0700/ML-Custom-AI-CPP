@@ -96,7 +96,8 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         );
 
         void fit (arma::mat& X, arma::vec& Y) override;
-        arma::vec predict (arma::mat& X) override;
+        std::variant<int, arma::vec> predict (std::variant<arma::vec, arma::mat>& X) override;
+        std::variant<arma::vec, arma::mat> predict_proba (std::variant<arma::vec, arma::mat>& X) override;
 
     private:
         std::unique_ptr<Node> root_node;
@@ -132,8 +133,10 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
             arma::vec& Y, 
             int recursive_max_depth
         );
-        int traverse_tree_prediction (
+        std::variant<int, arma::vec> traverse_tree_prediction (
             const arma::mat& element,
-            const std::unique_ptr<Node>& node
+            const std::unique_ptr<Node>& node,
+            bool standard_traverse,
+            bool probability_traverse
         );
 };
