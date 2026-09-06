@@ -470,7 +470,8 @@ variant<int, vec> DecisionTreeClassifier::traverse_tree_prediction (
             return unique_classes[
                 std::distance(computed_probabilities.begin(), max_elem_ptr)
             ];
-        } else {
+        }
+        if (probability_traverse) {
             return node->computed_probabilities;
         }
     }
@@ -551,7 +552,7 @@ variant<int, vec> DecisionTreeClassifier::predict (
             vector<int> predictions;
             for (arma::uword index = 0; index < std::get<mat>(X).n_rows; index++) {
                 variant<int, vec> prediction = DecisionTreeClassifier::traverse_tree_prediction(
-                    std::get<mat>(X).row(index), root_node, false, true
+                    std::get<mat>(X).row(index), root_node, true, false
                 );
                 predictions.emplace_back(std::get<int>(prediction));
             }
@@ -585,13 +586,24 @@ variant<vec, mat> DecisionTreeClassifier::predict_proba (
             );
             return std::get<vec>(prediction);
         } else if (std::holds_alternative<mat>(X)) {
+            mat batch_matrix;
             vector<vec> probability_distributions;
+
             for (arma::uword index = 0; index < std::get<mat>(X).n_rows; index++) {
                 variant<int, vec> prediction = DecisionTreeClassifier::traverse_tree_prediction(
                     std::get<mat>(X).row(index), root_node, false, true
                 );
-                probability_distributions.emplace_back(std::get<vec>(prediction));
+                probability_distributions.emplace_back(std::get<vec>(prediction).t());
             }
+            
+            for (int index = 0; index < probability_distributions.size(); index++) {
+                batch_matrix = arma::join_cols(
+                    batch_matrix, 
+                    probability_distributions[index]
+                );
+            }
+
+            return batch_matrix;
         } else {
             throw invalid_argument("[-] Error: Argument is neither arma::vec or arma::mat");
         }
