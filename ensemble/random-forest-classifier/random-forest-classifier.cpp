@@ -16,6 +16,7 @@
 // Standard C++ STL
 using std::endl;
 using std::cout;
+using std::cerr;
 using std::string;
 using std::vector;
 using std::unique_ptr;
@@ -28,6 +29,7 @@ using std::random_device;
 using std::mt19937;
 using std::uniform_int_distribution;
 using std::bad_variant_access;
+using std::runtime_error;
 
 // Armadillo
 using arma::mat;
@@ -118,7 +120,7 @@ int RandomForestClassifier::subsample_max_row_count (
 
             return cvtd_subsampled_max_features;
         } else {
-            return 0;
+            return dataset_row_count;
         }
     } catch (bad_variant_access& invalid_user_argument_accessed) {
         cout << "[-] Error: " << invalid_user_argument_accessed.what() << endl;
@@ -186,44 +188,54 @@ void RandomForestClassifier::fit (mat& X, vec& Y) {
     }
 }
 
-// ──────────────────────────────────────────────
-// predict  —  TODO: implement majority-vote inference
-// ──────────────────────────────────────────────
+variant<int, vec> RandomForestClassifier::predict (
+    variant<vec, mat>& X
+) {
+    try {
+        vector<int> predictions;
 
-vec RandomForestClassifier::predict (mat& X) {
-    // TODO:
-    //   For each row in X:
-    //     Collect predictions from all trees
-    //     result[i] = majority_vote(tree_preds)
-    //   Return result as column vector
+        if (trees.empty()) {
+            throw runtime_error("[-] Error: Model has not been fitted yet.");
+        }
 
-    return vec();
+        if (std::holds_alternative<vec>(X)) {
+            for (int tr_idx = 0; tr_idx < trees.size(); tr_idx++) {
+                variant<int, vec> prediction = trees[tr_idx]->predict(X);
+                predictions.emplace_back(
+                    std::get<int>(prediction)
+                );
+            }
+
+            vec converted_predictions = arma::conv_to<vec>::from(predictions);
+            return RandomForestClassifier::majority_vote(converted_predictions);
+        } else if (std::holds_alternative<mat>(X)) {
+            for (int tr_idx = 0; tr_idx < trees.size(); tr_idx++) {
+                variant<int, vec> prediction_per_tree = trees[tr_idx]->predict(X);
+                predictions.emplace_back(
+                    RandomForestClassifier::majority_vote(std::get<vec>(prediction_per_tree))
+                );
+            }
+        }
+    } catch (const runtime_error& error) {
+        cerr << error.what() << endl;
+    }
 }
 
-// ──────────────────────────────────────────────
-// predict_proba  —  TODO: implement probability averaging
-// ──────────────────────────────────────────────
+int RandomForestClassifier::majority_vote (const vec& predictions) {
+    UniqueFunctionReturns unq_ret = unique(predictions, true);
+    int highest_voted_class = unq_ret.labels[0];
+    int highest_voted_count = unq_ret.label_counts[0];
 
-vec RandomForestClassifier::predict_proba (mat& X) {
-    // TODO:
-    //   For each tree, collect probability rowvectors
-    //   Average them element-wise across all trees
-    //   Return averaged probability rowvector
+    for (int index = 1; index < unq_ret.labels.size(); index++) {
+        if (unq_ret.label_counts[index] > highest_voted_count) {
+            highest_voted_class = unq_ret.labels[index];
+            highest_voted_count = unq_ret.label_counts[index];
+        } else {
+            continue;
+        }
+    }
 
-    return vec();
-}
-
-// ──────────────────────────────────────────────
-// majority_vote  —  TODO: implement voting logic
-// ──────────────────────────────────────────────
-
-int RandomForestClassifier::majority_vote (const vector<int>& tree_preds) {
-    // TODO:
-    //   Count frequency of each class in tree_preds
-    //   Return the class with the highest count
-    //   (Tie-break: return the smaller class index)
-
-    return -1;
+    return highest_voted_class;
 }
 
 // ──────────────────────────────────────────────
@@ -295,12 +307,12 @@ int main () {
 
     rf.fit(train_x, train_y);
 
-    vec predictions = rf.predict(test_x);
+    //vec predictions = rf.predict(test_x);
 
-    dset_ops.save_dataset(
-        dataset_path + "/predictions/cpp-predictions.csv",
-        predictions
-    );
+    //dset_ops.save_dataset(
+    //    dataset_path + "/predictions/cpp-predictions.csv",
+    //    predictions
+    //);
 
     cout << "RandomForestClassifier predictions saved to "
          << dataset_path << "/predictions/cpp-predictions.csv" << endl;
