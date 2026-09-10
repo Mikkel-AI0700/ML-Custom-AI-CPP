@@ -61,7 +61,8 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
         );
 
         void fit (arma::mat& X, arma::vec& Y) override;
-        std::variant<int, vec> predict (std::variant<arma::vec, arma::mat>& X) override;
+        std::variant<int, arma::vec> predict (std::variant<arma::vec, arma::mat>& X) override;
+        std::variant<arma::vec, arma::mat> predict_proba (std::variant<arma::vec, arma::mat>& X) override;
 
     private:
         std::vector<std::unique_ptr<DecisionTreeClassifier>> trees;
@@ -86,7 +87,5 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
         );
         void build_forest ();
         int majority_vote (const arma::vec& predictions);
-        arma::vec average_probabilities (
-            const std::vector<arma::vec>& all_probs
-        );
+        arma::vec average_probabilities (const arma::vec& predictions);
 };
