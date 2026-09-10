@@ -8,7 +8,7 @@ using std::variant;
 using arma::vec;
 using arma::ivec;
 
-UniqueFunctionReturns unique (vec& Y, bool return_counts) {
+UniqueFunctionReturns unique (const vec& Y, bool return_counts) {
     std::vector<int> discovered_labels;
     std::vector<int> discovered_label_counts;
     UniqueFunctionReturns u_func_ret;
