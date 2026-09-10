@@ -1,12 +1,14 @@
 #include <map>
-#include <string>
 #include <tuple>
+#include <string>
+#include <variant>
 #include <algorithm>
 #include <armadillo>
 #include <filesystem>
 #include "base.hpp"
 #include "model_types.hpp"
 
+using std::variant;
 using std::invalid_argument;
 
 using arma::vec;
@@ -39,17 +41,17 @@ void BaseEstimator::fit (mat& train_x, vec& train_y) {
 }
 
 // nopsled as child classess will override definition
-vec BaseEstimator::predict (mat& test_x) {
+variant<int, vec> BaseEstimator::predict (variant<vec, mat>& test_x) {
     ;
 }
 
 // nopsled as child classess will override definition
-vec BaseEstimator::predict_proba (mat& test_x) {
+variant<vec, mat> BaseEstimator::predict_proba (variant<vec, mat>& test_x) {
     ;
 }
 
 // nopsled as child classess will override definition
-vec BaseEstimator::predict_proba_log (mat& test_x) {
+variant<vec, mat> BaseEstimator::predict_proba_log (variant<vec, mat>& test_x) {
     ;
 }
 
