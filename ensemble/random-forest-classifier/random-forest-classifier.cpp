@@ -29,6 +29,7 @@ using std::random_device;
 using std::mt19937;
 using std::uniform_int_distribution;
 using std::bad_variant_access;
+using std::invalid_argument;
 using std::runtime_error;
 
 // Armadillo
@@ -215,14 +216,38 @@ variant<int, vec> RandomForestClassifier::predict (
                     RandomForestClassifier::majority_vote(std::get<vec>(prediction_per_tree))
                 );
             }
+        } else {
+            throw invalid_argument("[-] Error: User supplied argument is not accepted");
         }
     } catch (const runtime_error& error) {
+        cerr << error.what() << endl;
+    } catch (const invalid_argument& error) {
+        cerr << error.what() << endl;
+    }
+}
+
+variant<vec, mat> RandomForestClassifier::predict_proba (variant<vec, mat>& X) {
+    try {
+        if (trees.empty()) {
+            throw runtime_error("[-] Error: Model has not been fitted yet.");
+        }
+
+        if (std::holds_alternative<vec>(X)) {
+            
+        } else if (std::holds_alternative<mat>(X)) {
+
+        } else {
+            throw invalid_argument("[-] Error: User supplied argument is not accepted");
+        }
+    } catch (const runtime_error& error) {
+        cerr << error.what() << endl;
+    } catch (const invalid_argument& error) {
         cerr << error.what() << endl;
     }
 }
 
 int RandomForestClassifier::majority_vote (const vec& predictions) {
-    UniqueFunctionReturns unq_ret = unique(predictions, true);
+    UniqueFunctionReturns unq_ret = ::unique(predictions, true);
     int highest_voted_class = unq_ret.labels[0];
     int highest_voted_count = unq_ret.label_counts[0];
 
@@ -238,23 +263,21 @@ int RandomForestClassifier::majority_vote (const vec& predictions) {
     return highest_voted_class;
 }
 
-// ──────────────────────────────────────────────
-// average_probabilities  —  TODO: implement averaging
-// ──────────────────────────────────────────────
+vec RandomForestClassifier::average_probabilities (const vec& predictions) {
+    try {
+        if (trees.empty()) {
+            throw runtime_error("[-] Error: Model has not been fitted yet.");
+        }
 
-vec RandomForestClassifier::average_probabilities (
-    const vector<vec>& all_probs
-) {
-    // TODO:
-    //   Sum all rowvecs element-wise, divide by n_estimators
-    //   Return the averaged probability vector
+        if (std::holds_alternative<vec>()) {
 
-    return vec();
+        }
+    } catch (const runtime_error& error) {
+
+    } catch (const invalid_argument& error) {
+
+    }
 }
-
-// ──────────────────────────────────────────────
-// main  —  fully functional driver
-// ──────────────────────────────────────────────
 
 #ifndef SKIP_MAIN
 int main () {
