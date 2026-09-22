@@ -212,9 +212,7 @@ variant<int, vec> RandomForestClassifier::predict (
         } else if (std::holds_alternative<mat>(X)) {
             for (int tr_idx = 0; tr_idx < trees.size(); tr_idx++) {
                 variant<int, vec> prb_per_tr = trees[tr_idx]->predict(X);
-                predictions.emplace_back(
-                    RandomForestClassifier::majority_vote(std::get<vec>(prb_pr_tr)
-                );
+                predictions.emplace_back(std::get<int>(prb_per_tr);
             }
 
             return arma::conv_to<vec>::from(predictions);
