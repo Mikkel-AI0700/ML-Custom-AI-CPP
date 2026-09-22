@@ -211,11 +211,13 @@ variant<int, vec> RandomForestClassifier::predict (
             return RandomForestClassifier::majority_vote(converted_predictions);
         } else if (std::holds_alternative<mat>(X)) {
             for (int tr_idx = 0; tr_idx < trees.size(); tr_idx++) {
-                variant<int, vec> prediction_per_tree = trees[tr_idx]->predict(X);
+                variant<int, vec> prb_per_tr = trees[tr_idx]->predict(X);
                 predictions.emplace_back(
-                    RandomForestClassifier::majority_vote(std::get<vec>(prediction_per_tree))
+                    RandomForestClassifier::majority_vote(std::get<vec>(prb_pr_tr)
                 );
             }
+
+            return arma::conv_to<vec>::from(predictions);
         } else {
             throw invalid_argument("[-] Error: User supplied argument is not accepted");
         }
@@ -233,16 +235,45 @@ variant<vec, mat> RandomForestClassifier::predict_proba (variant<vec, mat>& X) {
         }
 
         if (std::holds_alternative<vec>(X)) {
-            
-        } else if (std::holds_alternative<mat>(X)) {
+            vec probability_vector;
 
+            for (int tr_idx = 0; tr_idx < trees.size(); tr_idx++) {
+                variant<vec, mat> tmp_prb_vec = trees[tr_idx]->predict_proba(X);
+                if (tr_idx == 0) {
+                    probability_vector = std::get<vec>(tmp_prb_vec);
+                } else {
+                    probability_vector = probability_vector + std::get<vec>(tmp_prb_vec);
+                }
+            }
+
+            return arma::vec(probability_vector / trees.size());
+        } else if (std::holds_alternative<mat>(X)) {
+            mat final_probability_vector;
+            vector<vec> probability_vectors;
+
+            for (int tr_idx = 0; tr_idx < trees.size(); tr_idx++) {
+                variant<vec, mat> per_tr_prb = trees[tr_idx]->predict_proba(X);
+                mat ext_mat = std::get<mat>(per_tr_prb);
+                vec weighted_vector = (
+                    ext_mat.col(0) + ext_mat.cols(1, ext_mat.n_rows - 1)
+                ) / trees.size();
+                probability_vectors.emplace_back(weighted_vector);
+            }
+
+            for (int vc_idx = 0; vc_idx < probability_vectors.size(); vc_idx++) {
+                final_probability_vector = arma::concat(
+                    final_probability_vector, probability_vectors[vc_idx]
+                );
+            }
         } else {
-            throw invalid_argument("[-] Error: User supplied argument is not accepted");
+            throw invalid_argument("[-] Error: USer-supplied argument is invalid");
         }
     } catch (const runtime_error& error) {
         cerr << error.what() << endl;
+        exit(1);
     } catch (const invalid_argument& error) {
         cerr << error.what() << endl;
+        exit(1);
     }
 }
 
@@ -264,19 +295,7 @@ int RandomForestClassifier::majority_vote (const vec& predictions) {
 }
 
 vec RandomForestClassifier::average_probabilities (const vec& predictions) {
-    try {
-        if (trees.empty()) {
-            throw runtime_error("[-] Error: Model has not been fitted yet.");
-        }
-
-        if (std::holds_alternative<vec>()) {
-
-        }
-    } catch (const runtime_error& error) {
-
-    } catch (const invalid_argument& error) {
-
-    }
+    
 }
 
 #ifndef SKIP_MAIN
