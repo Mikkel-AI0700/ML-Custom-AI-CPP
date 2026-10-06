@@ -9,6 +9,20 @@ add_library(
     ${CMAKE_SOURCE_DIR}/header-source/header-source-files/cpp-utilities-source-files/linalg-operations.cpp
 )
 
+add_library(
+    DECISION_TREE_CLASSIFIER_LIBRARY
+    STATIC
+    ${CMAKE_SOURCE_DIR}/tree/decision-tree-classifier/tree.cpp
+)
+
+target_compile_definitions(DECISION_TREE_CLASSIFIER_LIBRARY PRIVATE SKIP_MAIN)
+
+target_link_libraries(DECISION_TREE_CLASSIFIER_LIBRARY
+    PUBLIC
+    CPP_SCIKIT_LEARN_LIBRARIES
+    ${ARMADILLO_LIBRARIES}
+)
+
 set(
     MODEL_EXECUTABLES
     DecisionTreeClassifier
@@ -36,6 +50,10 @@ foreach(IDX RANGE ${NUM_MODELS})
         ${ARMADILLO_LIBRARIES}
     )
 endforeach()
+
+target_link_libraries(RandomForestClassifier
+    DECISION_TREE_CLASSIFIER_LIBRARY
+)
 
 target_include_directories(
     CPP_SCIKIT_LEARN_LIBRARIES
