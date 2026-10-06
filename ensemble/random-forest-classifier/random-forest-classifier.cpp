@@ -194,6 +194,7 @@ variant<int, vec> RandomForestClassifier::predict (
 ) {
     try {
         vector<int> predictions;
+        vector<vec> tmp_holding_vectors;
 
         if (trees.empty()) {
             throw runtime_error("[-] Error: Model has not been fitted yet.");
@@ -210,12 +211,19 @@ variant<int, vec> RandomForestClassifier::predict (
             vec converted_predictions = arma::conv_to<vec>::from(predictions);
             return RandomForestClassifier::majority_vote(converted_predictions);
         } else if (std::holds_alternative<mat>(X)) {
-            for (int tr_idx = 0; tr_idx < trees.size(); tr_idx++) {
-                variant<int, vec> prb_per_tr = trees[tr_idx]->predict(X);
-                predictions.emplace_back(std::get<int>(prb_per_tr);
-            }
+            for (uword smp_idx = 0; smp_idx < std::get<mat>(X).n_rows; smp_idx++) {
+                vector<int> temporary_aggregated_predictions;
+                for (int tr_idx = 0; tr_idx < trees.size(); tr_idx++) {
+                    variant<int, vec> per_tr_prd = trees[tr_idx]->predict(X);
+                    temporary_aggregated_predictions.emplace_back(
+                        std::get<vec>(per_tr_prd)
+                    );
+                }
 
-            return arma::conv_to<vec>::from(predictions);
+                predictions.emplace_back(RandomForestClassifier::majority_vote(
+                    arma::conv_to<vec>::from(temporary_aggregated_predictions)
+                ));
+            }
         } else {
             throw invalid_argument("[-] Error: User supplied argument is not accepted");
         }
@@ -257,7 +265,6 @@ variant<vec, mat> RandomForestClassifier::predict_proba (variant<vec, mat>& X) {
                 ) / trees.size();
                 probability_vectors.emplace_back(weighted_vector);
             }
-
             for (int vc_idx = 0; vc_idx < probability_vectors.size(); vc_idx++) {
                 final_probability_vector = arma::concat(
                     final_probability_vector, probability_vectors[vc_idx]
