@@ -23,14 +23,14 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
         int                                                        n_estimators;
         bool                                                       bootstrap;
         bool                                                       oob_score;
-        std::optional<std::variant<int, float>>                    max_samples;
+        std::optional<MaxSamples>                                  max_samples;
         int                                                        random_state;
         int                                                        verbose;
 
         // ── DecisionTree pass-through hyperparameters ──
         std::string                                                criterion;
         int                                                        max_depth;
-        std::optional<std::variant<int, std::string>>              max_features;
+        std::optional<MaxFeatures>                                 max_features;
         int                                                        max_leaf_nodes;
         int                                                        min_samples_leaf;
         int                                                        min_samples_split;
@@ -46,14 +46,14 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
             int                                                    n_estimators = 100,
             std::string                                            criterion = "gini",
             int                                                    max_depth = 10,
-            std::optional<std::variant<int, std::string>>          max_features = "sqrt",
+            std::optional<MaxFeatures>                             max_features = "sqrt",
             int                                                    max_leaf_nodes = 10,
             int                                                    min_samples_leaf = 20,
             int                                                    min_samples_split = 30,
             float                                                  min_information_gain = 1e-5f,
             bool                                                   bootstrap = true,
             bool                                                   oob_score = false,
-            std::optional<std::variant<int, float>>                max_samples = 1000,
+            std::optional<MaxSamples>                              max_samples = 1000,
             int                                                    random_state = 42,
             int                                                    verbose = 0,
             std::vector<int>                                       numerical_features = {},
@@ -61,8 +61,8 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
         );
 
         void fit (arma::mat& X, arma::vec& Y) override;
-        std::variant<int, arma::vec> predict (std::variant<arma::vec, arma::mat>& X) override;
-        std::variant<arma::vec, arma::mat> predict_proba (std::variant<arma::vec, arma::mat>& X) override;
+        PredictionResult predict (InputFeatures& X) override;
+        ProbabilityResult predict_proba (InputFeatures& X) override;
 
     private:
         std::vector<std::unique_ptr<DecisionTreeClassifier>> trees;
@@ -85,7 +85,7 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
         int subsample_max_row_count (
             const int dataset_row_count
         );
-        void build_forest ();
+        void build_forest (const arma::vec& Y);
         int majority_vote (const arma::vec& predictions);
         arma::vec average_probabilities (const arma::vec& predictions);
 };

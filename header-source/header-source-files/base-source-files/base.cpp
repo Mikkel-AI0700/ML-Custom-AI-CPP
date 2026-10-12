@@ -41,17 +41,17 @@ void BaseEstimator::fit (mat& train_x, vec& train_y) {
 }
 
 // nopsled as child classess will override definition
-variant<int, vec> BaseEstimator::predict (variant<vec, mat>& test_x) {
+PredictionResult BaseEstimator::predict (InputFeatures& test_x) {
     ;
 }
 
 // nopsled as child classess will override definition
-variant<vec, mat> BaseEstimator::predict_proba (variant<vec, mat>& test_x) {
+ProbabilityResult BaseEstimator::predict_proba (InputFeatures& test_x) {
     ;
 }
 
 // nopsled as child classess will override definition
-variant<vec, mat> BaseEstimator::predict_proba_log (variant<vec, mat>& test_x) {
+ProbabilityResult BaseEstimator::predict_proba_log (InputFeatures& test_x) {
     ;
 }
 

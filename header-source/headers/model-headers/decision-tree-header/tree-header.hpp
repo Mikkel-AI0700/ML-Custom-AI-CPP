@@ -75,7 +75,7 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
     public:
         std::string                                 split_metric;
         int                                         max_depth;
-        std::variant<int, float, std::string>       max_feature;
+        MaxFeatures                                 max_feature;
         int                                         max_leaf_nodes;
         int                                         min_samples_leaf;
         int                                         min_samples_split;
@@ -86,7 +86,7 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         DecisionTreeClassifier(
             std::string                             split_metric = "gini",
             int                                     max_depth = 10,
-            std::variant<int, float, std::string>   max_feature = "none",
+            MaxFeatures                             max_feature = "none",
             int                                     max_leaf_nodes = 10,
             int                                     min_samples_leaf = 20,
             int                                     min_samples_split = 30,
@@ -96,8 +96,8 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
         );
 
         void fit (arma::mat& X, arma::vec& Y) override;
-        std::variant<int, arma::vec> predict (std::variant<arma::vec, arma::mat>& X) override;
-        std::variant<arma::vec, arma::mat> predict_proba (std::variant<arma::vec, arma::mat>& X) override;
+        PredictionResult predict (InputFeatures& X) override;
+        ProbabilityResult predict_proba (InputFeatures& X) override;
 
     private:
         std::unique_ptr<Node> root_node;
@@ -133,7 +133,7 @@ class DecisionTreeClassifier: public BaseEstimator, public ClassifierMixin {
             arma::vec& Y, 
             int recursive_max_depth
         );
-        std::variant<int, arma::vec> traverse_tree_prediction (
+        PredictionResult traverse_tree_prediction (
             const arma::mat& element,
             const std::unique_ptr<Node>& node,
             bool standard_traverse,
