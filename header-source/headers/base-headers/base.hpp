@@ -8,10 +8,15 @@ class BaseEstimator {
     public:
         virtual ~BaseEstimator() = default;
 
-        virtual HashMapParameters get_parameters (HashMapParameters hyperparameter_hashmap);
-        virtual void set_parameters (HashMapParameters original_hyperparameters, HashMapParameters user_hyperparameters);
+        virtual HashMapParameters get_parameters (
+            HashMapParameters hyperparameter_hashmap
+        );
+        virtual void set_parameters (
+            HashMapParameters original_hyperparameters, 
+            HashMapParameters user_hyperparameters
+        );
 
-        virtual void fit (arma::mat& train_x, arma::vec& train_y);
+        virtual void fit (const arma::mat& train_x, const arma::vec& train_y);
         virtual PredictionResult predict (InputFeatures& test_x);
         virtual ProbabilityResult predict_proba (InputFeatures& test_x);
         virtual ProbabilityResult predict_proba_log (InputFeatures& test_x);
