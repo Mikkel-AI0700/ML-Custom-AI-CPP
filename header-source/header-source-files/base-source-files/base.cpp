@@ -36,7 +36,7 @@ void BaseEstimator::set_parameters (
 }
 
 // nopsled as child classess will override definition
-void BaseEstimator::fit (mat& train_x, vec& train_y) {
+void BaseEstimator::fit (const mat& train_x, const vec& train_y) {
     ;
 }
 

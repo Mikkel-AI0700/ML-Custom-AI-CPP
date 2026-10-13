@@ -37,7 +37,7 @@ using arma::uvec;
 DecisionTreeClassifier::DecisionTreeClassifier(
     string                              split_metric,
     int                                 max_depth,
-    variant<int, float, string>         max_feature,
+    MaxFeatures                         max_feature,
     int                                 max_leaf_nodes,
     int                                 min_samples_leaf,
     int                                 min_samples_split,
@@ -449,7 +449,7 @@ unique_ptr<Node> DecisionTreeClassifier::build_decision_tree (
 
 }
 
-variant<int, vec> DecisionTreeClassifier::traverse_tree_prediction (
+PredictionResult DecisionTreeClassifier::traverse_tree_prediction (
     const mat& element,
     const unique_ptr<Node>& node,
     bool standard_traverse,
@@ -517,8 +517,26 @@ variant<int, vec> DecisionTreeClassifier::traverse_tree_prediction (
     throw std::runtime_error("[-] Error: Unexpected corrupted node encountered.");
 }
 
-void DecisionTreeClassifier::fit (mat& X, vec& Y) {
+void DecisionTreeClassifier::fit (const mat& X, const vec& Y) {
     int recursive_max_depth = 1;
+
+    if (unique_classes.empty()) {
+        // To prevent overlap of old and new labels
+        // If user decided to be stupid and fits multiple times
+        unique_classes.clear();
+        classes_to_index.clear();
+
+        // Initialize unique_classes
+        DecisionTreeClassifier::compute_class_probability(Y);
+
+        root_node = DecisionTreeClassifier::build_decision_tree(
+            X,
+            Y,
+            recursive_max_depth
+        );
+    } else {
+        
+    }
 
     // To prevent overlap of old and new labels
     // If user decided to be stupid and fits multiple times
@@ -535,8 +553,8 @@ void DecisionTreeClassifier::fit (mat& X, vec& Y) {
     );
 }
 
-variant<int, vec> DecisionTreeClassifier::predict (
-    variant<vec, mat>& X
+PredictionResult DecisionTreeClassifier::predict (
+    InputFeatures& X
 ) {
     try {
         if (unique_classes.empty()) {
@@ -544,14 +562,14 @@ variant<int, vec> DecisionTreeClassifier::predict (
         }
 
         if (std::holds_alternative<vec>(X)) {
-            variant<int, vec> pred = DecisionTreeClassifier::traverse_tree_prediction(
+            PredictionResult pred = DecisionTreeClassifier::traverse_tree_prediction(
                 std::get<vec>(X), root_node, true, false
             );
             return std::get<int>(pred);
         } else if (std::holds_alternative<mat>(X)) {
             vector<int> predictions;
             for (arma::uword index = 0; index < std::get<mat>(X).n_rows; index++) {
-                variant<int, vec> prediction = DecisionTreeClassifier::traverse_tree_prediction(
+                PredictionResult prediction = DecisionTreeClassifier::traverse_tree_prediction(
                     std::get<mat>(X).row(index), root_node, true, false
                 );
                 predictions.emplace_back(std::get<int>(prediction));
@@ -572,8 +590,8 @@ variant<int, vec> DecisionTreeClassifier::predict (
     }
 }
 
-variant<vec, mat> DecisionTreeClassifier::predict_proba (
-    variant<vec, mat>& X
+ProbabilityResult DecisionTreeClassifier::predict_proba (
+    InputFeatures& X
 ) {
     try {
         if (unique_classes.empty()) {
@@ -581,7 +599,7 @@ variant<vec, mat> DecisionTreeClassifier::predict_proba (
         }
 
         if (std::holds_alternative<vec>(X)) {
-            variant<int, vec> prediction = DecisionTreeClassifier::traverse_tree_prediction(
+            PredictionResult prediction = DecisionTreeClassifier::traverse_tree_prediction(
                 std::get<vec>(X), root_node, false, true
             );
             return std::get<vec>(prediction);

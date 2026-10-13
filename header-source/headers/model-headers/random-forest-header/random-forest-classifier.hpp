@@ -60,7 +60,7 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
             std::vector<int>                                       categorical_features = {}
         );
 
-        void fit (arma::mat& X, arma::vec& Y) override;
+        void fit (const arma::mat& X, const arma::vec& Y) override;
         PredictionResult predict (InputFeatures& X) override;
         ProbabilityResult predict_proba (InputFeatures& X) override;
 

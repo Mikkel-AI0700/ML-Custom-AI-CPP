@@ -43,14 +43,14 @@ RandomForestClassifier::RandomForestClassifier(
     int                               n_estimators,
     string                            criterion,
     int                               max_depth,
-    optional<variant<int, string>>    max_features,
+    optional<MaxFeatures>             max_features,
     int                               max_leaf_nodes,
     int                               min_samples_leaf,
     int                               min_samples_split,
     float                             min_information_gain,
     bool                              bootstrap,
     bool                              oob_score,
-    optional<variant<int, float>>     max_samples,
+    optional<MaxSamples>              max_samples,
     int                               random_state,
     int                               verbose,
     vector<int>                       numerical_features,
@@ -85,7 +85,8 @@ void RandomForestClassifier::create_sub_rng_seed (
     }
 }
 
-void RandomForestClassifier::build_forest () {
+void RandomForestClassifier::build_forest (const vec& Y) {
+    UniqueFunctionReturns unq_ret = unique(Y, false);
     for (int est_cnt = 0; est_cnt < n_estimators; ++est_cnt) {
         auto dt_instance = std::make_unique<DecisionTreeClassifier>(
             criterion,
@@ -99,8 +100,10 @@ void RandomForestClassifier::build_forest () {
             categorical_features
         );
 
-        cout << "[+] Tree no." << est_cnt << "created" << endl;
+        
         trees.emplace_back(std::move(dt_instance));
+
+        cout << "[+] Tree no. " << est_cnt << "created" << endl;
     }
 }
 
@@ -154,13 +157,34 @@ uvec RandomForestClassifier::create_indices (
     }
 }
 
+int RandomForestClassifier::majority_vote (const vec& predictions) {
+    UniqueFunctionReturns unq_ret = ::unique(predictions, true);
+    int highest_voted_class = unq_ret.labels[0];
+    int highest_voted_count = unq_ret.label_counts[0];
+
+    for (int index = 1; index < unq_ret.labels.size(); index++) {
+        if (unq_ret.label_counts[index] > highest_voted_count) {
+            highest_voted_class = unq_ret.labels[index];
+            highest_voted_count = unq_ret.label_counts[index];
+        } else {
+            continue;
+        }
+    }
+
+    return highest_voted_class;
+}
+
+vec RandomForestClassifier::average_probabilities (const vec& predictions) {
+    
+}
+
 void RandomForestClassifier::fit (mat& X, vec& Y) {
     rng.seed(random_state);
     uniform_int_distribution<int> uid_samples_generator(0, X.n_rows);
 
     int subsampled_sample_count = RandomForestClassifier::subsample_max_row_count(X.n_rows);
     RandomForestClassifier::create_sub_rng_seed(X.n_rows, rng);
-    RandomForestClassifier::build_forest();
+    RandomForestClassifier::build_forest(Y);
 
     for (int est_idx = 0; est_idx < n_estimators; ++est_idx) {
         rng_child.seed(rng_per_tree[est_idx]);
@@ -189,8 +213,8 @@ void RandomForestClassifier::fit (mat& X, vec& Y) {
     }
 }
 
-variant<int, vec> RandomForestClassifier::predict (
-    variant<vec, mat>& X
+PredictionResult RandomForestClassifier::predict (
+    InputFeatures& X
 ) {
     try {
         vector<int> predictions;
@@ -202,7 +226,7 @@ variant<int, vec> RandomForestClassifier::predict (
 
         if (std::holds_alternative<vec>(X)) {
             for (int tr_idx = 0; tr_idx < trees.size(); tr_idx++) {
-                variant<int, vec> prediction = trees[tr_idx]->predict(X);
+                PredictionResult prediction = trees[tr_idx]->predict(X);
                 predictions.emplace_back(
                     std::get<int>(prediction)
                 );
@@ -214,7 +238,7 @@ variant<int, vec> RandomForestClassifier::predict (
             for (uword smp_idx = 0; smp_idx < std::get<mat>(X).n_rows; smp_idx++) {
                 vector<int> temporary_aggregated_predictions;
                 for (int tr_idx = 0; tr_idx < trees.size(); tr_idx++) {
-                    variant<int, vec> per_tr_prd = trees[tr_idx]->predict(X);
+                    PredictionResult per_tr_prd = trees[tr_idx]->predict(X);
                     temporary_aggregated_predictions.emplace_back(
                         std::get<vec>(per_tr_prd)
                     );
@@ -234,7 +258,7 @@ variant<int, vec> RandomForestClassifier::predict (
     }
 }
 
-variant<vec, mat> RandomForestClassifier::predict_proba (variant<vec, mat>& X) {
+ProbabilityResult RandomForestClassifier::predict_proba (InputFeatures& X) {
     try {
         if (trees.empty()) {
             throw runtime_error("[-] Error: Model has not been fitted yet.");
@@ -244,7 +268,7 @@ variant<vec, mat> RandomForestClassifier::predict_proba (variant<vec, mat>& X) {
             vec probability_vector;
 
             for (int tr_idx = 0; tr_idx < trees.size(); tr_idx++) {
-                variant<vec, mat> tmp_prb_vec = trees[tr_idx]->predict_proba(X);
+                ProbabilityResult tmp_prb_vec = trees[tr_idx]->predict_proba(X);
                 if (tr_idx == 0) {
                     probability_vector = std::get<vec>(tmp_prb_vec);
                 } else {
@@ -258,20 +282,19 @@ variant<vec, mat> RandomForestClassifier::predict_proba (variant<vec, mat>& X) {
             vector<vec> probability_vectors;
 
             for (int tr_idx = 0; tr_idx < trees.size(); tr_idx++) {
-                variant<vec, mat> per_tr_prb = trees[tr_idx]->predict_proba(X);
+                ProbabilityResult per_tr_prb = trees[tr_idx]->predict_proba(X);
                 mat ext_mat = std::get<mat>(per_tr_prb);
                 vec weighted_vector = (
                     ext_mat.col(0) + ext_mat.cols(1, ext_mat.n_rows - 1)
                 ) / trees.size();
                 probability_vectors.emplace_back(weighted_vector);
             }
+
             for (int vc_idx = 0; vc_idx < probability_vectors.size(); vc_idx++) {
-                final_probability_vector = arma::concat(
-                    final_probability_vector, probability_vectors[vc_idx]
-                );
+                
             }
         } else {
-            throw invalid_argument("[-] Error: USer-supplied argument is invalid");
+            throw invalid_argument("[-] Error: User-supplied argument is invalid");
         }
     } catch (const runtime_error& error) {
         cerr << error.what() << endl;
@@ -280,27 +303,6 @@ variant<vec, mat> RandomForestClassifier::predict_proba (variant<vec, mat>& X) {
         cerr << error.what() << endl;
         exit(1);
     }
-}
-
-int RandomForestClassifier::majority_vote (const vec& predictions) {
-    UniqueFunctionReturns unq_ret = ::unique(predictions, true);
-    int highest_voted_class = unq_ret.labels[0];
-    int highest_voted_count = unq_ret.label_counts[0];
-
-    for (int index = 1; index < unq_ret.labels.size(); index++) {
-        if (unq_ret.label_counts[index] > highest_voted_count) {
-            highest_voted_class = unq_ret.labels[index];
-            highest_voted_count = unq_ret.label_counts[index];
-        } else {
-            continue;
-        }
-    }
-
-    return highest_voted_class;
-}
-
-vec RandomForestClassifier::average_probabilities (const vec& predictions) {
-    
 }
 
 #ifndef SKIP_MAIN
