@@ -237,11 +237,22 @@ PredictionResult RandomForestClassifier::predict (
             vec converted_predictions = arma::conv_to<vec>::from(predictions);
             return RandomForestClassifier::majority_vote(converted_predictions);
         } else if (std::holds_alternative<mat>(X)) {
-            for (uword tr_idx = 0; tr_idx < trees.size(); tr_idx++) {
-                PredictionResult btc_vec_tree = trees[tr_idx]->predict(X);
+            vector<int> temp_predictions;
+
+            for (uword mtx_idx = 0; mtx_idx < std::get<mat>(X).n_rows; mtx_idx++) {
+                for (int tr_idx = 0; tr_idx < trees.size(); tr_idx++) {
+                    InputFeatures indv_prb = vec(std::get<mat>(X).row(mtx_idx));
+                    PredictionResult per_prediction = trees[tr_idx]->predict(indv_prb);
+                    temp_predictions.push_back(std::get<int>(per_prediction));
+                }
+
                 predictions.push_back(
-                    RandomForestClassifier::majority_vote(std::get<vec>(btc_vec_tree))
+                    RandomForestClassifier::majority_vote(
+                        arma::conv_to<vec>::from(temp_predictions)
+                    )
                 );
+
+                temp_predictions.clear();
             }
 
             return arma::conv_to<vec>::from(predictions);
