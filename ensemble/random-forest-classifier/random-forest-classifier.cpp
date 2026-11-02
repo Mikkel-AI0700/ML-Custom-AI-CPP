@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <armadillo>
 #include "loader.hpp"
+#include "model_types.hpp"
 #include "tree-header.hpp"
 #include "random-forest-classifier.hpp"
 #include "linalg-operations.hpp"
@@ -79,7 +80,7 @@ void RandomForestClassifier::create_sub_rng_seed (
     const int dataset_row_count,
     mt19937& mt_generator
 ) {
-    uniform_int_distribution<int> uid_child_rng_generator(0, 1000);
+    uniform_int_distribution<int> uid_child_rng_generator(0, trees.size());
     for (int est_cnt = 0; est_cnt < n_estimators; ++est_cnt) {
         rng_per_tree.emplace_back(uid_child_rng_generator(mt_generator));
     }
@@ -178,9 +179,11 @@ vec RandomForestClassifier::average_probabilities (const vec& predictions) {
     
 }
 
-void RandomForestClassifier::fit (mat& X, vec& Y) {
+void RandomForestClassifier::fit (const mat& X, const vec& Y) {
     rng.seed(random_state);
     uniform_int_distribution<int> uid_samples_generator(0, X.n_rows);
+
+    rng_per_tree.clear();
 
     int subsampled_sample_count = RandomForestClassifier::subsample_max_row_count(X.n_rows);
     RandomForestClassifier::create_sub_rng_seed(X.n_rows, rng);
@@ -209,7 +212,7 @@ void RandomForestClassifier::fit (mat& X, vec& Y) {
         mat selected_X = X.submat(bsd_row_indices, bsd_col_indices);
         vec selected_y = Y.rows(bsd_row_indices);
 
-        trees[est_idx]->fit(selected_X, selected_y);
+       trees[est_idx]->fit(selected_X, selected_y);
     }
 }
 
@@ -218,7 +221,6 @@ PredictionResult RandomForestClassifier::predict (
 ) {
     try {
         vector<int> predictions;
-        vector<vec> tmp_holding_vectors;
 
         if (trees.empty()) {
             throw runtime_error("[-] Error: Model has not been fitted yet.");
@@ -235,26 +237,23 @@ PredictionResult RandomForestClassifier::predict (
             vec converted_predictions = arma::conv_to<vec>::from(predictions);
             return RandomForestClassifier::majority_vote(converted_predictions);
         } else if (std::holds_alternative<mat>(X)) {
-            for (uword smp_idx = 0; smp_idx < std::get<mat>(X).n_rows; smp_idx++) {
-                vector<int> temporary_aggregated_predictions;
-                for (int tr_idx = 0; tr_idx < trees.size(); tr_idx++) {
-                    PredictionResult per_tr_prd = trees[tr_idx]->predict(X);
-                    temporary_aggregated_predictions.emplace_back(
-                        std::get<vec>(per_tr_prd)
-                    );
-                }
-
-                predictions.emplace_back(RandomForestClassifier::majority_vote(
-                    arma::conv_to<vec>::from(temporary_aggregated_predictions)
-                ));
+            for (uword tr_idx = 0; tr_idx < trees.size(); tr_idx++) {
+                PredictionResult btc_vec_tree = trees[tr_idx]->predict(X);
+                predictions.push_back(
+                    RandomForestClassifier::majority_vote(std::get<vec>(btc_vec_tree))
+                );
             }
+
+            return arma::conv_to<vec>::from(predictions);
         } else {
             throw invalid_argument("[-] Error: User supplied argument is not accepted");
         }
     } catch (const runtime_error& error) {
         cerr << error.what() << endl;
+        exit(1);
     } catch (const invalid_argument& error) {
         cerr << error.what() << endl;
+        exit(1);
     }
 }
 
@@ -276,23 +275,21 @@ ProbabilityResult RandomForestClassifier::predict_proba (InputFeatures& X) {
                 }
             }
 
-            return arma::vec(probability_vector / trees.size());
+            return vec(probability_vector / trees.size());
         } else if (std::holds_alternative<mat>(X)) {
-            mat final_probability_vector;
-            vector<vec> probability_vectors;
+            mat accumulated_probabilities;
 
-            for (int tr_idx = 0; tr_idx < trees.size(); tr_idx++) {
-                ProbabilityResult per_tr_prb = trees[tr_idx]->predict_proba(X);
-                mat ext_mat = std::get<mat>(per_tr_prb);
-                vec weighted_vector = (
-                    ext_mat.col(0) + ext_mat.cols(1, ext_mat.n_rows - 1)
-                ) / trees.size();
-                probability_vectors.emplace_back(weighted_vector);
-            }
-
-            for (int vc_idx = 0; vc_idx < probability_vectors.size(); vc_idx++) {
+            for (uword tr_idx = 0; tr_idx < trees.size(); tr_idx++) {
+                ProbabilityResult indv_prb_mat = trees[tr_idx]->predict_proba(X);
                 
+                if (tr_idx == 0) {
+                    accumulated_probabilities = std::get<mat>(indv_prb_mat);
+                } else {
+                    accumulated_probabilities += std::get<mat>(indv_prb_mat);
+                }
             }
+
+            return mat(accumulated_probabilities / trees.size());
         } else {
             throw invalid_argument("[-] Error: User-supplied argument is invalid");
         }
@@ -324,21 +321,21 @@ int main () {
     }
 
     RandomForestClassifier rf(
-        100,             // n_estimators
-        "gini",          // criterion
-        10,              // max_depth
-        "sqrt",          // max_features
-        10,              // max_leaf_nodes
-        20,              // min_samples_leaf
-        20,              // min_samples_split
-        0.0001f,         // min_information_gain
-        true,            // bootstrap
-        false,           // oob_score
-        10000,    // max_samples
-        42,              // random_state
-        0,               // verbose
-        num_feats,       // numerical_features
-        cat_feats        // categorical_features
+        100,              // n_estimators
+        "gini",              // criterion
+        10,                  // max_depth
+        "sqrt",           // max_features
+        10,             // max_leaf_nodes
+        20,           // min_samples_leaf
+        20,          // min_samples_split
+        0.0001f,  // min_information_gain
+        true,                // bootstrap
+        false,               // oob_score
+        10000,             // max_samples
+        42,               // random_state
+        0,                     // verbose
+        num_feats,  // numerical_features
+        cat_feats // categorical_features
     );
 
     DatasetOperations dset_ops;
