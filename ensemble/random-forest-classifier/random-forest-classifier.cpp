@@ -86,8 +86,7 @@ void RandomForestClassifier::create_sub_rng_seed (
     }
 }
 
-void RandomForestClassifier::build_forest (const vec& Y) {
-    UniqueFunctionReturns unq_ret = unique(Y, false);
+void RandomForestClassifier::build_forest () {
     for (int est_cnt = 0; est_cnt < n_estimators; ++est_cnt) {
         auto dt_instance = std::make_unique<DecisionTreeClassifier>(
             criterion,
@@ -101,7 +100,7 @@ void RandomForestClassifier::build_forest (const vec& Y) {
             categorical_features
         );
 
-        
+        dt_instance->unique_classes = rfc_unique_classes;
         trees.emplace_back(std::move(dt_instance));
 
         cout << "[+] Tree no. " << est_cnt << "created" << endl;
@@ -175,19 +174,27 @@ int RandomForestClassifier::majority_vote (const vec& predictions) {
     return highest_voted_class;
 }
 
-vec RandomForestClassifier::average_probabilities (const vec& predictions) {
-    
-}
-
 void RandomForestClassifier::fit (const mat& X, const vec& Y) {
+    // Clear the random number per each call to prevent overlap
+    rng_per_tree.clear();
+
+    // Clear the created trees during multiple calls of fit()
+    trees.clear();
+
+    // Initialize the trees
+    RandomForestClassifier::build_forest();
+
+    // Initialize the random number per tree
     rng.seed(random_state);
     uniform_int_distribution<int> uid_samples_generator(0, X.n_rows);
 
-    rng_per_tree.clear();
+    // Create the unique classes to be assigned
+    UniqueFunctionReturns unq_ret = unique(Y, true);
+    rfc_unique_classes = unq_ret.labels;
 
+    // Bootstrap the entire dataset
     int subsampled_sample_count = RandomForestClassifier::subsample_max_row_count(X.n_rows);
     RandomForestClassifier::create_sub_rng_seed(X.n_rows, rng);
-    RandomForestClassifier::build_forest(Y);
 
     for (int est_idx = 0; est_idx < n_estimators; ++est_idx) {
         rng_child.seed(rng_per_tree[est_idx]);
@@ -212,7 +219,7 @@ void RandomForestClassifier::fit (const mat& X, const vec& Y) {
         mat selected_X = X.submat(bsd_row_indices, bsd_col_indices);
         vec selected_y = Y.rows(bsd_row_indices);
 
-       trees[est_idx]->fit(selected_X, selected_y);
+        trees[est_idx]->fit(selected_X, selected_y);
     }
 }
 
@@ -240,8 +247,9 @@ PredictionResult RandomForestClassifier::predict (
             vector<int> temp_predictions;
 
             for (uword mtx_idx = 0; mtx_idx < std::get<mat>(X).n_rows; mtx_idx++) {
+                InputFeatures indv_prb = vec(std::get<mat>(X).row(mtx_idx).t());
+
                 for (int tr_idx = 0; tr_idx < trees.size(); tr_idx++) {
-                    InputFeatures indv_prb = vec(std::get<mat>(X).row(mtx_idx));
                     PredictionResult per_prediction = trees[tr_idx]->predict(indv_prb);
                     temp_predictions.push_back(std::get<int>(per_prediction));
                 }
@@ -263,6 +271,9 @@ PredictionResult RandomForestClassifier::predict (
         cerr << error.what() << endl;
         exit(1);
     } catch (const invalid_argument& error) {
+        cerr << error.what() << endl;
+        exit(1);
+    } catch (const bad_variant_access& error) {
         cerr << error.what() << endl;
         exit(1);
     }
@@ -308,6 +319,9 @@ ProbabilityResult RandomForestClassifier::predict_proba (InputFeatures& X) {
         cerr << error.what() << endl;
         exit(1);
     } catch (const invalid_argument& error) {
+        cerr << error.what() << endl;
+        exit(1);
+    } catch (const bad_variant_access& error) {
         cerr << error.what() << endl;
         exit(1);
     }

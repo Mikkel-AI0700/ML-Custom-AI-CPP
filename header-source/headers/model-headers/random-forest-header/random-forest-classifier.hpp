@@ -69,6 +69,7 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
         std::vector<int>                                     rng_per_tree;
         std::mt19937                                         rng;
         std::mt19937                                         rng_child;
+        std::vector<int>                                     rfc_unique_classes;
 
         arma::uvec create_indices (
             int row_count,
@@ -85,7 +86,7 @@ class RandomForestClassifier: public BaseEstimator, public ClassifierMixin {
         int subsample_max_row_count (
             const int dataset_row_count
         );
-        void build_forest (const arma::vec& Y);
+        void build_forest ();
         int majority_vote (const arma::vec& predictions);
         arma::vec average_probabilities (const arma::vec& predictions);
 };
